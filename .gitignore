@@ -1,0 +1,29 @@
+# Environment
+.env
+.env.*
+!.env.example
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+build/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Testing / coverage
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Logs
+*.log
