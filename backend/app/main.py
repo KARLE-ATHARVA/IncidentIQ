@@ -1,8 +1,11 @@
+import json
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
+
+from backend.app.core.redis import QUEUE_NAME, redis_client
 from backend.app.db.database import engine
-from backend.app.core.redis import redis_client
 
 app = FastAPI(
     title="IncidentIQ API",
@@ -28,12 +31,32 @@ def root():
 def health_check():
     return {"status": "healthy"}
 
+
 @app.get("/health/database")
 def database_health_check():
     with engine.connect() as connection:
         result = connection.execute(text("SELECT 1"))
         return {"database": result.scalar_one()}
-    
+
+
 @app.get("/health/redis")
 def redis_health_check():
     return {"redis": redis_client.ping()}
+
+
+@app.post("/jobs/test")
+def create_test_job():
+    job = {
+        "type": "test",
+        "message": "Hello from FastAPI",
+    }
+
+    redis_client.rpush(
+        QUEUE_NAME,
+        json.dumps(job),
+    )
+
+    return {
+        "queued": True,
+        "job": job,
+    }
