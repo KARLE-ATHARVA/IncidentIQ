@@ -9,6 +9,7 @@ from backend.app.db.database import engine
 from backend.app.api.auth import router as auth_router
 from backend.app.api.project import router as project_router
 from backend.app.api.service import router as service_router
+from backend.app.api.telemetry import router as telemetry_router
 
 app = FastAPI(
     title="IncidentIQ API",
@@ -27,6 +28,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(project_router)
 app.include_router(service_router)
+app.include_router(telemetry_router)
 
 @app.get("/")
 def root():
@@ -35,7 +37,7 @@ def root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy"}
+    return {"status": "ok"}
 
 
 @app.get("/health/database")

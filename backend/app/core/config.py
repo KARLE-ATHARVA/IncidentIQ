@@ -12,7 +12,7 @@ REDIS_URL = os.getenv(
 
 JWT_SECRET = os.getenv(
     "JWT_SECRET",
-    "incidentiq-dev-secret-change-me",
+    "incidentiq-dev-secret-change-me-123"
 )
 
 JWT_ALGORITHM = "HS256"
