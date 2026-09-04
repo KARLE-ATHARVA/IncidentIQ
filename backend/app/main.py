@@ -6,6 +6,9 @@ from sqlalchemy import text
 
 from backend.app.core.redis import QUEUE_NAME, redis_client
 from backend.app.db.database import engine
+from backend.app.api.auth import router as auth_router
+from backend.app.api.project import router as project_router
+from backend.app.api.service import router as service_router
 
 app = FastAPI(
     title="IncidentIQ API",
@@ -21,6 +24,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router)
+app.include_router(project_router)
+app.include_router(service_router)
 
 @app.get("/")
 def root():
