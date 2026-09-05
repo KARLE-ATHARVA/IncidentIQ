@@ -23,6 +23,10 @@ from backend.app.services.telemetry import (
     create_log_event,
     create_metric_event,
 )
+from backend.app.services.detection import DetectionConfig
+from backend.app.services.detection_integration import (
+    detect_metric_event_anomaly,
+)
 
 
 router = APIRouter(
@@ -147,6 +151,47 @@ def get_metrics(
         .limit(limit)
         .all()
     )
+
+
+# =========================================================
+# METRIC ANOMALY DETECTION
+# =========================================================
+
+@router.post(
+    "/metrics/{metric_event_id}/detect",
+)
+def detect_metric(
+    project_id: UUID,
+    service_id: UUID,
+    metric_event_id: UUID,
+    db: Session = Depends(get_db),
+    service: Service = Depends(get_authorized_service),
+):
+    metric_event = (
+        db.query(MetricEvent)
+        .filter(
+            MetricEvent.id == metric_event_id,
+            MetricEvent.service_id == service.id,
+        )
+        .first()
+    )
+
+    if metric_event is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Metric event not found.",
+        )
+
+    result = detect_metric_event_anomaly(
+        db=db,
+        metric_event_id=metric_event.id,
+        config=DetectionConfig(
+            minimum_observations=10,
+            persistence_window=3,
+        ),
+    )
+
+    return result
 
 
 # =========================================================
