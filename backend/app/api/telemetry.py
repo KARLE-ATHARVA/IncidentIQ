@@ -27,7 +27,9 @@ from backend.app.services.detection import DetectionConfig
 from backend.app.services.detection_integration import (
     detect_metric_event_anomaly,
 )
-
+from backend.app.services.incident_pipeline import (
+    process_metric_event_for_incident,
+)
 
 router = APIRouter(
     prefix="/api/projects/{project_id}/services/{service_id}",
@@ -251,3 +253,51 @@ def get_deployments(
         .limit(limit)
         .all()
     )
+
+@router.post(
+    "/metrics/{metric_event_id}/process-incident",
+)
+def process_metric_incident(
+    project_id: UUID,
+    service_id: UUID,
+    metric_event_id: UUID,
+    db: Session = Depends(get_db),
+    service: Service = Depends(get_authorized_service),
+):
+    metric_event = (
+        db.query(MetricEvent)
+        .filter(
+            MetricEvent.id == metric_event_id,
+            MetricEvent.service_id == service.id,
+        )
+        .first()
+    )
+
+    if metric_event is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Metric event not found.",
+        )
+
+    incident = process_metric_event_for_incident(
+        db=db,
+        metric_event_id=metric_event.id,
+    )
+
+    if incident is None:
+        return {
+            "incident_created": False,
+            "message": (
+                "Metric event did not produce a qualifying incident."
+            ),
+        }
+
+    return {
+        "incident_created": True,
+        "incident_id": str(incident.id),
+        "project_id": str(incident.project_id),
+        "title": incident.title,
+        "severity": incident.severity,
+        "status": incident.status,
+        "detected_at": incident.detected_at,
+    }
