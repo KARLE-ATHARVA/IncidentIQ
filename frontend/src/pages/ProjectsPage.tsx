@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import type { Project } from "../types";
+
 import { getProjects } from "../api";
 
 function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+
   const [loading, setLoading] = useState(true);
+
   const [error, setError] = useState("");
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     getProjects()
@@ -37,7 +44,13 @@ function ProjectsPage() {
       ) : (
         <ul>
           {projects.map((project) => (
-            <li key={project.id}>{project.name}</li>
+            <li key={project.id}>
+              <button
+                onClick={() => navigate(`/projects/${project.id}/incidents`)}
+              >
+                {project.name}
+              </button>
+            </li>
           ))}
         </ul>
       )}

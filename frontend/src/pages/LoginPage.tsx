@@ -1,4 +1,4 @@
-import {  useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../api";
 
@@ -17,13 +17,17 @@ function LoginPage() {
     setLoading(true);
 
     try {
-      const data = await login(email, password);
+      const data = await login(email.trim(), password);
 
       localStorage.setItem("access_token", data.access_token);
 
       navigate("/dashboard");
-    } catch {
-      setError("Invalid email or password");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to log in. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -39,6 +43,7 @@ function LoginPage() {
           <input
             id="email"
             type="email"
+            autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             required
@@ -50,6 +55,7 @@ function LoginPage() {
           <input
             id="password"
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required

@@ -18,7 +18,17 @@ async function request<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    const payload: unknown = await response.json().catch(() => null);
+    const detail = (
+      typeof payload === "object"
+      && payload !== null
+      && "detail" in payload
+      && typeof payload.detail === "string"
+    )
+      ? payload.detail
+      : `API request failed: ${response.status}`;
+
+    throw new Error(detail);
   }
 
   return response.json();
