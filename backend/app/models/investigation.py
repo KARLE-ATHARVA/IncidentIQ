@@ -37,9 +37,9 @@ class Investigation(Base):
         nullable=False,
     )
 
-    started_at: Mapped[datetime] = mapped_column(
+    started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
-        nullable=False,
+        nullable=True,
     )
 
     completed_at: Mapped[datetime | None] = mapped_column(
