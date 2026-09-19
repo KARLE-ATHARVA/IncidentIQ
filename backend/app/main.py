@@ -12,6 +12,13 @@ from backend.app.api.service import router as service_router
 from backend.app.api.telemetry import router as telemetry_router
 from backend.app.api.incidents import router as incidents_router
 from backend.app.api import investigations
+from backend.app.api.timeline import router as timeline_router
+from backend.app.api.historical_incidents import (
+    router as historical_incidents_router,
+)
+from backend.app.api.historical_retrieval import (
+    router as historical_retrieval_router,
+)
 
 app = FastAPI(
     title="IncidentIQ API",
@@ -33,7 +40,9 @@ app.include_router(service_router)
 app.include_router(telemetry_router)
 app.include_router(incidents_router)
 app.include_router(investigations.router)
-
+app.include_router(timeline_router)
+app.include_router(historical_incidents_router)
+app.include_router(historical_retrieval_router)
 @app.get("/")
 def root():
     return {"message": "IncidentIQ API is running"}

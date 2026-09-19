@@ -15,6 +15,7 @@ Mako==1.4.1
 MarkupSafe==3.0.3
 psycopg==3.3.5
 psycopg-binary==3.3.5
+pgvector==0.4.2
 pycparser==3.0
 pydantic==2.13.5
 pydantic_core==2.46.5

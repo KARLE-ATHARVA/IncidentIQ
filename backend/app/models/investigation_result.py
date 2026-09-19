@@ -1,21 +1,16 @@
 import uuid
 
-from sqlalchemy import Float, ForeignKey, Text
+from datetime import datetime
+
+from sqlalchemy import DateTime, Float, ForeignKey, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Float, ForeignKey, Table,Index, Text
+
 from backend.app.db.base import Base
 
 
 class InvestigationResult(Base):
     __tablename__ = "investigation_results"
-
-    __table_args__ = (
-        Index(
-            "ix_investigation_results_investigation",
-            "investigation_id",
-        ),
-    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -27,6 +22,12 @@ class InvestigationResult(Base):
         UUID(as_uuid=True),
         ForeignKey("investigations.id"),
         nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
     )
 
     hypothesis: Mapped[str] = mapped_column(
@@ -44,6 +45,11 @@ class InvestigationResult(Base):
         nullable=False,
     )
 
+    alternative_explanations: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     next_steps: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
@@ -57,4 +63,5 @@ class InvestigationResult(Base):
     evidence_links = relationship(
         "InvestigationResultEvidence",
         back_populates="investigation_result",
+        cascade="all, delete-orphan",
     )

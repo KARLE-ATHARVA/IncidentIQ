@@ -53,7 +53,7 @@ def test_full_metric_to_incident_pipeline():
             event = MetricEvent(
                 service_id=service.id,
                 timestamp=base_time
-                - timedelta(minutes=20 - index),
+                - timedelta(minutes=25 - index),
                 name="checkout_latency",
                 value=100.0 + (index % 2),
             )

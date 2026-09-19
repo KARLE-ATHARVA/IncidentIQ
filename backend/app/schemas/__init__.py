@@ -4,3 +4,4 @@ from backend.app.schemas.deployment_event import (
     DeploymentEventCreate,
     DeploymentEventResponse,
 )
+from backend.app.schemas.timeline import TimelineEvent, TimelineResponse

@@ -2,6 +2,14 @@ import type { Investigation } from "../types";
 
 import request from "./client";
 
+export async function getInvestigations(
+  projectId: string,
+  incidentId: string,
+): Promise<Investigation[]> {
+  return request<Investigation[]>(
+    `/api/projects/${projectId}/incidents/${incidentId}/investigations`,
+  );
+}
 
 export async function createInvestigation(
   projectId: string,
@@ -14,7 +22,6 @@ export async function createInvestigation(
     },
   );
 }
-
 
 export async function startInvestigation(
   projectId: string,
