@@ -3,20 +3,31 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
+from backend.app.api.investigations import get_reasoning_engine
 from backend.app.core.security import create_access_token
 from backend.app.db.database import SessionLocal
 from backend.app.main import app
 from backend.app.models.deployment_event import DeploymentEvent
 from backend.app.models.incident import Incident
 from backend.app.models.investigation import Investigation
+from backend.app.models.investigation_result import InvestigationResult
 from backend.app.models.log_event import LogEvent
 from backend.app.models.metric_event import MetricEvent
 from backend.app.models.project import Project
 from backend.app.models.service import Service
 from backend.app.models.user import User
+from backend.app.services.investigation_reasoning import (
+    DeterministicReasoner,
+)
+from backend.app.services.reasoning_engine import ReasoningEngine
 
 
 client = TestClient(app)
+
+
+class FailingReasoningEngine(ReasoningEngine):
+    def generate(self, context):
+        raise RuntimeError("Simulated AI reasoning failure.")
 
 
 def create_user_project_incident_investigation():
@@ -26,6 +37,7 @@ def create_user_project_incident_investigation():
         email=f"investigation-result-api-{uuid4()}@example.com",
         password_hash="test-password-hash",
     )
+
     db.add(user)
     db.flush()
 
@@ -33,6 +45,7 @@ def create_user_project_incident_investigation():
         name=f"Investigation Result API Project {uuid4()}",
         owner_id=user.id,
     )
+
     db.add(project)
     db.flush()
 
@@ -40,10 +53,15 @@ def create_user_project_incident_investigation():
         name="checkout",
         project_id=project.id,
     )
+
     db.add(service)
     db.flush()
 
     base_time = datetime.now(timezone.utc)
+
+    # ------------------------------------------------------------------
+    # Historical metric observations
+    # ------------------------------------------------------------------
 
     for index in range(20):
         db.add(
@@ -54,6 +72,10 @@ def create_user_project_incident_investigation():
                 value=100.0 + (index % 2),
             )
         )
+
+    # ------------------------------------------------------------------
+    # Recent anomalous observations
+    # ------------------------------------------------------------------
 
     for index in range(5):
         db.add(
@@ -71,7 +93,12 @@ def create_user_project_incident_investigation():
         name="checkout_latency",
         value=180.0,
     )
+
     db.add(current_metric)
+
+    # ------------------------------------------------------------------
+    # Error log
+    # ------------------------------------------------------------------
 
     db.add(
         LogEvent(
@@ -81,6 +108,10 @@ def create_user_project_incident_investigation():
             message="Payment provider timeout",
         )
     )
+
+    # ------------------------------------------------------------------
+    # Deployment
+    # ------------------------------------------------------------------
 
     db.add(
         DeploymentEvent(
@@ -93,6 +124,10 @@ def create_user_project_incident_investigation():
 
     db.flush()
 
+    # ------------------------------------------------------------------
+    # Incident
+    # ------------------------------------------------------------------
+
     incident = Incident(
         project_id=project.id,
         title="Checkout latency incident",
@@ -101,15 +136,20 @@ def create_user_project_incident_investigation():
         status="open",
         detected_at=base_time,
     )
+
     db.add(incident)
     db.flush()
+
+    # ------------------------------------------------------------------
+    # Investigation
+    # ------------------------------------------------------------------
 
     investigation = Investigation(
         incident_id=incident.id,
         status="pending",
     )
-    db.add(investigation)
 
+    db.add(investigation)
     db.commit()
 
     db.refresh(user)
@@ -132,6 +172,11 @@ def investigation_url(project, incident, investigation):
     )
 
 
+# ---------------------------------------------------------------------------
+# Generate investigation result
+# ---------------------------------------------------------------------------
+
+
 def test_generate_investigation_result_requires_auth():
     db, user, project, incident, investigation = (
         create_user_project_incident_investigation()
@@ -139,10 +184,12 @@ def test_generate_investigation_result_requires_auth():
 
     try:
         response = client.post(
-            f"{investigation_url(project, incident, investigation)}/generate-result"
+            f"{investigation_url(project, incident, investigation)}"
+            "/generate-result"
         )
 
         assert response.status_code in (401, 403)
+
     finally:
         db.rollback()
         db.close()
@@ -153,11 +200,18 @@ def test_generate_investigation_result_returns_result():
         create_user_project_incident_investigation()
     )
 
+    # API tests should not depend on Ollama/Qwen availability.
+    # DeterministicReasoner is used as the injected primary engine.
+    app.dependency_overrides[get_reasoning_engine] = (
+        lambda: DeterministicReasoner()
+    )
+
     try:
         token = create_token(user.id)
 
         response = client.post(
-            f"{investigation_url(project, incident, investigation)}/generate-result",
+            f"{investigation_url(project, incident, investigation)}"
+            "/generate-result",
             headers={"Authorization": f"Bearer {token}"},
         )
 
@@ -170,12 +224,97 @@ def test_generate_investigation_result_returns_result():
         assert data["hypothesis"]
         assert 0.0 <= data["confidence"] <= 1.0
         assert data["reasoning"]
+
+        # The injected reasoning engine is being used as the
+        # primary reasoning path, so the API should report "ai".
+        assert data["reasoning_source"] == "ai"
+
+        # Verify provenance was persisted.
+        db_result = (
+            db.query(InvestigationResult)
+            .filter(InvestigationResult.id == data["id"])
+            .first()
+        )
+
+        assert db_result is not None
+        assert db_result.reasoning_source == "ai"
+
         assert isinstance(data["next_steps"], list)
         assert len(data["next_steps"]) > 0
 
+        # Day 12 evaluation metadata.
+        assert "evaluation" in data
+        assert data["evaluation"]["is_valid"] is True
+        assert data["evaluation"]["evidence_count"] > 0
+        assert data["evaluation"]["supporting_evidence_count"] > 0
+        assert 0.0 <= data["evaluation"]["evidence_coverage"] <= 1.0
+
     finally:
+        app.dependency_overrides.pop(get_reasoning_engine, None)
         db.rollback()
         db.close()
+
+
+def test_generate_investigation_result_uses_deterministic_fallback_when_ai_fails():
+    db, user, project, incident, investigation = (
+        create_user_project_incident_investigation()
+    )
+
+    app.dependency_overrides[get_reasoning_engine] = (
+        lambda: FailingReasoningEngine()
+    )
+
+    try:
+        token = create_token(user.id)
+
+        response = client.post(
+            f"{investigation_url(project, incident, investigation)}"
+            "/generate-result",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 201
+
+        data = response.json()
+
+        assert data["id"] is not None
+        assert data["investigation_id"] == str(investigation.id)
+        assert data["hypothesis"]
+        assert 0.0 <= data["confidence"] <= 1.0
+        assert data["reasoning"]
+
+        # AI failed, therefore deterministic fallback must be reported.
+        assert data["reasoning_source"] == "deterministic_fallback"
+
+        # Verify fallback provenance was persisted.
+        db_result = (
+            db.query(InvestigationResult)
+            .filter(InvestigationResult.id == data["id"])
+            .first()
+        )
+
+        assert db_result is not None
+        assert db_result.reasoning_source == "deterministic_fallback"
+
+        assert isinstance(data["alternative_explanations"], list)
+        assert len(data["alternative_explanations"]) > 0
+
+        assert isinstance(data["next_steps"], list)
+        assert len(data["next_steps"]) > 0
+
+        # Evaluation must still succeed for the fallback result.
+        assert "evaluation" in data
+        assert data["evaluation"]["is_valid"] is True
+
+    finally:
+        app.dependency_overrides.pop(get_reasoning_engine, None)
+        db.rollback()
+        db.close()
+
+
+# ---------------------------------------------------------------------------
+# Get investigation result
+# ---------------------------------------------------------------------------
 
 
 def test_get_investigation_result_requires_auth():
@@ -185,10 +324,12 @@ def test_get_investigation_result_requires_auth():
 
     try:
         response = client.get(
-            f"{investigation_url(project, incident, investigation)}/result"
+            f"{investigation_url(project, incident, investigation)}"
+            "/result"
         )
 
         assert response.status_code in (401, 403)
+
     finally:
         db.rollback()
         db.close()
@@ -199,19 +340,25 @@ def test_get_investigation_result_returns_complete_result():
         create_user_project_incident_investigation()
     )
 
+    app.dependency_overrides[get_reasoning_engine] = (
+        lambda: DeterministicReasoner()
+    )
+
     try:
         token = create_token(user.id)
         headers = {"Authorization": f"Bearer {token}"}
 
         generate_response = client.post(
-            f"{investigation_url(project, incident, investigation)}/generate-result",
+            f"{investigation_url(project, incident, investigation)}"
+            "/generate-result",
             headers=headers,
         )
 
         assert generate_response.status_code == 201
 
         response = client.get(
-            f"{investigation_url(project, incident, investigation)}/result",
+            f"{investigation_url(project, incident, investigation)}"
+            "/result",
             headers=headers,
         )
 
@@ -227,6 +374,9 @@ def test_get_investigation_result_returns_complete_result():
         assert data["hypothesis"]
         assert 0.0 <= data["confidence"] <= 1.0
         assert data["reasoning"]
+
+        # Verify provenance survives persistence and retrieval.
+        assert data["reasoning_source"] == "ai"
 
         assert isinstance(data["alternative_explanations"], list)
         assert len(data["alternative_explanations"]) > 0
@@ -246,6 +396,7 @@ def test_get_investigation_result_returns_complete_result():
             assert evidence["collected_at"]
 
     finally:
+        app.dependency_overrides.pop(get_reasoning_engine, None)
         db.rollback()
         db.close()
 
@@ -259,16 +410,24 @@ def test_get_investigation_result_returns_404_when_result_does_not_exist():
         token = create_token(user.id)
 
         response = client.get(
-            f"{investigation_url(project, incident, investigation)}/result",
+            f"{investigation_url(project, incident, investigation)}"
+            "/result",
             headers={"Authorization": f"Bearer {token}"},
         )
 
         assert response.status_code == 404
-        assert response.json()["detail"] == "Investigation result not found."
+        assert response.json()["detail"] == (
+            "Investigation result not found."
+        )
 
     finally:
         db.rollback()
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# Authorization / project isolation
+# ---------------------------------------------------------------------------
 
 
 def test_investigation_result_cannot_be_accessed_from_wrong_project():
@@ -281,18 +440,68 @@ def test_investigation_result_cannot_be_accessed_from_wrong_project():
             email=f"other-user-{uuid4()}@example.com",
             password_hash="test-password-hash",
         )
+
         db.add(other_user)
+        db.flush()
+
+        other_project = Project(
+            name=f"Other Project {uuid4()}",
+            owner_id=other_user.id,
+        )
+
+        db.add(other_project)
         db.commit()
-        db.refresh(other_user)
+
+        db.refresh(other_project)
 
         token = create_token(other_user.id)
 
         response = client.get(
-            f"{investigation_url(project, incident, investigation)}/result",
+            f"/api/projects/{other_project.id}/incidents/"
+            f"{incident.id}/investigations/{investigation.id}/result",
             headers={"Authorization": f"Bearer {token}"},
         )
 
-        assert response.status_code == 404
+        assert response.status_code in (403, 404)
+
+    finally:
+        db.rollback()
+        db.close()
+
+
+def test_generate_investigation_result_cannot_be_created_from_wrong_project():
+    db, user, project, incident, investigation = (
+        create_user_project_incident_investigation()
+    )
+
+    try:
+        other_user = User(
+            email=f"other-generate-user-{uuid4()}@example.com",
+            password_hash="test-password-hash",
+        )
+
+        db.add(other_user)
+        db.flush()
+
+        other_project = Project(
+            name=f"Other Generate Project {uuid4()}",
+            owner_id=other_user.id,
+        )
+
+        db.add(other_project)
+        db.commit()
+
+        db.refresh(other_project)
+
+        token = create_token(other_user.id)
+
+        response = client.post(
+            f"/api/projects/{other_project.id}/incidents/"
+            f"{incident.id}/investigations/{investigation.id}/generate-result",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code in (403, 404)
 
     finally:
         db.rollback()

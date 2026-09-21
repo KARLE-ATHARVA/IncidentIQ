@@ -16,16 +16,29 @@ def persist_investigation_result(
     db: Session,
     investigation: Investigation,
     result_context: InvestigationResultContext,
+    reasoning_source: str = "ai",
 ) -> InvestigationResult:
     """
     Persist an evidence-backed investigation result.
 
     Every supporting evidence ID must belong to the same incident
-    as the investigation. This prevents an investigation result from
-    referencing evidence belonging to another incident.
+    as the investigation.
+
+    reasoning_source records whether the result came from the
+    AI reasoning engine or the deterministic fallback.
     """
 
-    validate_investigation_hypothesis(result_context.hypothesis)
+    if reasoning_source not in {
+        "ai",
+        "deterministic_fallback",
+    }:
+        raise ValueError(
+            "Invalid reasoning source."
+        )
+
+    validate_investigation_hypothesis(
+        result_context.hypothesis
+    )
 
     if investigation.incident_id is None:
         raise ValueError(
@@ -51,7 +64,8 @@ def persist_investigation_result(
     }
 
     missing_evidence_ids = (
-        set(supporting_evidence_ids) - found_evidence_ids
+        set(supporting_evidence_ids)
+        - found_evidence_ids
     )
 
     if missing_evidence_ids:
@@ -74,6 +88,7 @@ def persist_investigation_result(
 
     investigation_result = InvestigationResult(
         investigation_id=investigation.id,
+        reasoning_source=reasoning_source,
         hypothesis=result_context.hypothesis.hypothesis.strip(),
         confidence=result_context.hypothesis.confidence,
         reasoning=result_context.hypothesis.reasoning.strip(),

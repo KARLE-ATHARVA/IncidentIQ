@@ -30,6 +30,13 @@ class InvestigationResult(Base):
         server_default=func.now(),
     )
 
+    reasoning_source: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="ai",
+        server_default="ai",
+    )
+
     hypothesis: Mapped[str] = mapped_column(
         Text,
         nullable=False,

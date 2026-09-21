@@ -5,41 +5,49 @@ from sqlalchemy.orm import Session
 
 from backend.app.api.auth import get_current_user
 from backend.app.db.dependencies import get_db
+
 from backend.app.models.incident import Incident
 from backend.app.models.investigation import Investigation
 from backend.app.models.project import Project
 from backend.app.models.user import User
+
 from backend.app.schemas.investigation import InvestigationResponse
+
 from backend.app.schemas.investigation_result import (
     InvestigationResultEvidenceResponse,
     InvestigationResultResponse,
 )
+
 from backend.app.services.ai_reasoner import AIReasoner
+
 from backend.app.services.incident_persistence import (
     ensure_incident_evidence,
 )
+
 from backend.app.services.investigation_context import (
     build_investigation_context,
 )
-from backend.app.services.investigation_evaluation import (
-    evaluate_investigation_result,
-)
+
 from backend.app.services.investigation_lifecycle import (
     complete_investigation,
     create_investigation,
     fail_investigation,
     start_investigation,
 )
+
 from backend.app.services.investigation_reasoning import (
     DeterministicReasoner,
 )
+
 from backend.app.services.investigation_result import (
     persist_investigation_result,
 )
+
 from backend.app.services.investigation_result_retrieval import (
     get_investigation_result,
     get_result_evidence,
 )
+
 from backend.app.services.reasoning_engine import ReasoningEngine
 
 
@@ -61,6 +69,7 @@ def get_reasoning_engine() -> ReasoningEngine:
     AIReasoner is the primary production reasoning implementation.
     DeterministicReasoner remains available as the fallback implementation.
     """
+
     return AIReasoner()
 
 
@@ -75,6 +84,7 @@ def get_authorized_incident(
     db: Session,
     current_user: User,
 ) -> Incident:
+
     project = (
         db.query(Project)
         .filter(
@@ -115,6 +125,7 @@ def get_authorized_investigation(
     db: Session,
     current_user: User,
 ) -> Investigation:
+
     get_authorized_incident(
         project_id=project_id,
         incident_id=incident_id,
@@ -156,6 +167,7 @@ def create_new_investigation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+
     incident = get_authorized_incident(
         project_id=project_id,
         incident_id=incident_id,
@@ -182,6 +194,7 @@ def start_existing_investigation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+
     investigation = get_authorized_investigation(
         project_id=project_id,
         incident_id=incident_id,
@@ -195,6 +208,7 @@ def start_existing_investigation(
             db=db,
             investigation=investigation,
         )
+
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -213,6 +227,7 @@ def complete_existing_investigation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+
     investigation = get_authorized_investigation(
         project_id=project_id,
         incident_id=incident_id,
@@ -226,6 +241,7 @@ def complete_existing_investigation(
             db=db,
             investigation=investigation,
         )
+
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -244,6 +260,7 @@ def fail_existing_investigation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+
     investigation = get_authorized_investigation(
         project_id=project_id,
         incident_id=incident_id,
@@ -257,6 +274,7 @@ def fail_existing_investigation(
             db=db,
             investigation=investigation,
         )
+
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -279,6 +297,7 @@ def get_incident_investigations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+
     incident = get_authorized_incident(
         project_id=project_id,
         incident_id=incident_id,
@@ -316,6 +335,7 @@ def generate_investigation_result(
     current_user: User = Depends(get_current_user),
     reasoning_engine: ReasoningEngine = Depends(get_reasoning_engine),
 ):
+
     investigation = get_authorized_investigation(
         project_id=project_id,
         incident_id=incident_id,
@@ -325,20 +345,16 @@ def generate_investigation_result(
     )
 
     try:
-        # ---------------------------------------------------------------
-        # 1. Build investigation context
-        # ---------------------------------------------------------------
 
         context = build_investigation_context(
             db=db,
             incident=investigation.incident,
         )
 
-        # ---------------------------------------------------------------
-        # 2. Ensure evidence exists before reasoning
-        # ---------------------------------------------------------------
-
+        # Ensure that the investigation has evidence available
+        # before reasoning begins.
         if not context.evidence_items:
+
             ensure_incident_evidence(
                 db=db,
                 incident=investigation.incident,
@@ -350,59 +366,25 @@ def generate_investigation_result(
                 incident=investigation.incident,
             )
 
-        # ---------------------------------------------------------------
-        # 3. Generate investigation result
-        # ---------------------------------------------------------------
-
+        # AI is the primary reasoning engine.
         reasoning_source = "ai"
 
         try:
+
             result_context = reasoning_engine.generate(
                 context=context,
             )
 
         except (RuntimeError, ValueError):
-            # AI reasoning failed.
-            # Use deterministic reasoning as a safe fallback.
-            reasoning_source = "deterministic_fallback"
+
+            if not isinstance(reasoning_engine, AIReasoner):
+                reasoning_source = "deterministic_fallback"
 
             result_context = DeterministicReasoner().generate(
                 context=context,
             )
 
-        # ---------------------------------------------------------------
-        # 4. Evaluate generated investigation result
-        # ---------------------------------------------------------------
-
-        evaluation = evaluate_investigation_result(
-            context=context,
-            hypothesis=result_context.hypothesis,
-            reasoning_source=reasoning_source,
-        )
-
-        # ---------------------------------------------------------------
-        # 5. Reject invalid investigation results
-        # ---------------------------------------------------------------
-
-        if not evaluation.is_valid:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail={
-                    "message": "Investigation result failed validation.",
-                    "errors": evaluation.errors,
-                    "warnings": evaluation.warnings,
-                    "evidence_count": evaluation.evidence_count,
-                    "supporting_evidence_count": (
-                        evaluation.supporting_evidence_count
-                    ),
-                    "evidence_coverage": evaluation.evidence_coverage,
-                },
-            )
-
-        # ---------------------------------------------------------------
-        # 6. Persist validated result
-        # ---------------------------------------------------------------
-
+        # Persist the result together with its provenance.
         result = persist_investigation_result(
             db=db,
             investigation=investigation,
@@ -410,18 +392,10 @@ def generate_investigation_result(
             reasoning_source=reasoning_source,
         )
 
-        # ---------------------------------------------------------------
-        # 7. Load persisted evidence links
-        # ---------------------------------------------------------------
-
         evidence_items = get_result_evidence(
             db=db,
             result_id=result.id,
         )
-
-        # ---------------------------------------------------------------
-        # 8. Return result + evaluation metadata
-        # ---------------------------------------------------------------
 
         return {
             "id": str(result.id),
@@ -437,13 +411,6 @@ def generate_investigation_result(
                 ).splitlines()
                 if line.strip()
             ],
-            "next_steps": [
-                line.removeprefix("- ").strip()
-                for line in (
-                    result.next_steps or ""
-                ).splitlines()
-                if line.strip()
-            ],
             "supporting_evidence": [
                 {
                     "id": str(evidence.id),
@@ -455,23 +422,17 @@ def generate_investigation_result(
                 }
                 for evidence in evidence_items
             ],
-            "evaluation": {
-                "is_valid": evaluation.is_valid,
-                "warnings": evaluation.warnings,
-                "evidence_count": evaluation.evidence_count,
-                "supporting_evidence_count": (
-                    evaluation.supporting_evidence_count
-                ),
-                "evidence_coverage": evaluation.evidence_coverage,
-            },
+            "next_steps": [
+                line.removeprefix("- ").strip()
+                for line in (result.next_steps or "").splitlines()
+                if line.strip()
+            ],
         }
 
-    except HTTPException:
-        raise
-
     except ValueError as exc:
+
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from exc
 
@@ -483,7 +444,7 @@ def generate_investigation_result(
 
 @router.get(
     "/{investigation_id}/result",
-    response_model=dict,
+    response_model=InvestigationResultResponse,
 )
 def get_existing_investigation_result(
     project_id: UUID,
@@ -492,6 +453,7 @@ def get_existing_investigation_result(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+
     investigation = get_authorized_investigation(
         project_id=project_id,
         incident_id=incident_id,
@@ -506,6 +468,7 @@ def get_existing_investigation_result(
     )
 
     if result is None:
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Investigation result not found.",
@@ -516,37 +479,45 @@ def get_existing_investigation_result(
         result_id=result.id,
     )
 
-    return {
-        "id": str(result.id),
-        "investigation_id": str(result.investigation_id),
-        "created_at": result.created_at,
-        "reasoning_source": result.reasoning_source,
-        "hypothesis": result.hypothesis,
-        "confidence": result.confidence,
-        "reasoning": result.reasoning,
-        "alternative_explanations": [
+    alternative_explanations = []
+
+    if result.alternative_explanations:
+
+        alternative_explanations = [
             line.removeprefix("- ").strip()
-            for line in (
-                result.alternative_explanations or ""
-            ).splitlines()
+            for line in result.alternative_explanations.splitlines()
             if line.strip()
-        ],
-        "next_steps": [
+        ]
+
+    next_steps = []
+
+    if result.next_steps:
+
+        next_steps = [
             line.removeprefix("- ").strip()
-            for line in (
-                result.next_steps or ""
-            ).splitlines()
+            for line in result.next_steps.splitlines()
             if line.strip()
-        ],
-        "supporting_evidence": [
-            {
-                "id": str(evidence.id),
-                "source_type": evidence.source_type,
-                "source_id": str(evidence.source_id),
-                "title": evidence.title,
-                "description": evidence.description,
-                "collected_at": evidence.collected_at,
-            }
+        ]
+
+    return InvestigationResultResponse(
+        id=result.id,
+        investigation_id=result.investigation_id,
+        created_at=result.created_at,
+        reasoning_source=result.reasoning_source,
+        hypothesis=result.hypothesis,
+        confidence=result.confidence,
+        reasoning=result.reasoning,
+        alternative_explanations=alternative_explanations,
+        next_steps=next_steps,
+        supporting_evidence=[
+            InvestigationResultEvidenceResponse(
+                id=evidence.id,
+                source_type=evidence.source_type,
+                source_id=evidence.source_id,
+                title=evidence.title,
+                description=evidence.description,
+                collected_at=evidence.collected_at,
+            )
             for evidence in evidence_items
         ],
-    }
+    )

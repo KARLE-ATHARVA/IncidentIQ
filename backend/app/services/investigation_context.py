@@ -359,6 +359,36 @@ def validate_investigation_hypothesis(
             "Next steps cannot contain empty values."
         )
 
+
+def validate_supporting_evidence_against_context(
+    context: InvestigationContext,
+    hypothesis: InvestigationHypothesis,
+) -> None:
+    """
+    Ensure every evidence ID referenced by a reasoning result exists
+    in the investigation context.
+
+    This protects the reasoning boundary from fabricated or unrelated
+    evidence identifiers.
+    """
+
+    available_evidence_ids = {
+        evidence.evidence_id
+        for evidence in context.evidence_items
+    }
+
+    missing_evidence_ids = (
+        set(hypothesis.supporting_evidence_ids)
+        - available_evidence_ids
+    )
+
+    if missing_evidence_ids:
+        raise ValueError(
+            "One or more supporting evidence items are not present "
+            "in the investigation context."
+        )
+
+    
 def serialize_investigation_result(
     result: InvestigationResultContext,
 ) -> dict:

@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -17,6 +18,7 @@ class InvestigationResultResponse(BaseModel):
     id: UUID
     investigation_id: UUID
     created_at: datetime
+    reasoning_source: str
     hypothesis: str
     confidence: float
     reasoning: str
