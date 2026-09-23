@@ -50,3 +50,21 @@ def test_build_embedding_text_handles_unknown_root_cause_and_resolution():
 
     assert "Root Cause: Unknown" in text
     assert "Resolution: Unknown" in text
+
+def test_historical_embedding_text_represents_reusable_incident_knowledge():
+    incident = make_historical_incident(
+        root_cause="Database connection pool exhaustion",
+        resolution="Increased connection pool capacity.",
+    )
+
+    text = build_embedding_text(incident)
+
+    required_knowledge = [
+        "Summary:",
+        "Symptoms:",
+        "Root Cause:",
+        "Resolution:",
+    ]
+
+    for field in required_knowledge:
+        assert field in text
