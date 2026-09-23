@@ -57,9 +57,10 @@ def evaluate_investigation_result(
     }
 
     supporting_ids = set(hypothesis.supporting_evidence_ids)
+    grounded_supporting_ids = supporting_ids & evidence_ids
 
     evidence_count = len(evidence_ids)
-    supporting_evidence_count = len(supporting_ids)
+    supporting_evidence_count = len(grounded_supporting_ids)
 
     # ---------------------------------------------------------
     # Structural validation
@@ -97,7 +98,7 @@ def evaluate_investigation_result(
 
     if evidence_count > 0:
         evidence_coverage = (
-            len(supporting_ids & evidence_ids)
+            len(grounded_supporting_ids)
             / evidence_count
         )
     else:
