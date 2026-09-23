@@ -15,4 +15,7 @@ export type {
 export type {
   Investigation,
   InvestigationStatus,
+  InvestigationEvidence,
+  InvestigationEvaluation,
+  InvestigationResult,
 } from "./investigation";

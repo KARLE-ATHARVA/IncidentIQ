@@ -1,11 +1,13 @@
 export { getProjects } from "./projects";
 
-export { getIncidents, getIncident } from "./incidents";
+export { getIncidents, getIncident, getEvidenceInspection } from "./incidents";
 
 export {
   getInvestigations,
   createInvestigation,
   startInvestigation,
+  generateInvestigationResult,
+  getInvestigationResult,
 } from "./investigations";
 
 export { login } from "./auth";

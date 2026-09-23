@@ -1,6 +1,11 @@
 import type { Incident, IncidentListResponse } from "../types";
+
 import type { TimelineResponse } from "../types/timeline";
+
 import type { SimilarHistoricalIncident } from "../types/historicalRetrieval";
+
+import type { InvestigationEvidence } from "../types/investigation";
+
 import request from "./client";
 
 export async function getIncidents(
@@ -40,5 +45,15 @@ export async function getSimilarHistoricalIncidents(
 
   return request<SimilarHistoricalIncident[]>(
     `/api/projects/${projectId}/incidents/${incidentId}/similar-incidents?${params.toString()}`,
+  );
+}
+
+export async function getEvidenceInspection(
+  projectId: string,
+  incidentId: string,
+  evidenceId: string,
+): Promise<InvestigationEvidence> {
+  return request<InvestigationEvidence>(
+    `/api/projects/${projectId}/incidents/${incidentId}/evidence/${evidenceId}`,
   );
 }

@@ -6,24 +6,22 @@ from sqlalchemy.orm import Session
 
 from backend.app.api.dependencies import get_current_user
 from backend.app.db.dependencies import get_db
+from backend.app.models.evidence_item import EvidenceItem
 from backend.app.models.incident import Incident
 from backend.app.models.project import Project
 from backend.app.models.user import User
 from backend.app.schemas.incident import (
     IncidentDetail,
     IncidentListResponse,
-    IncidentSummary,
-)
-from backend.app.schemas.incident import (
-    IncidentDetail,
-    IncidentListResponse,
     IncidentStatusResponse,
     IncidentSummary,
 )
+from backend.app.services.evidence_inspection import inspect_evidence
 from backend.app.services.incident_lifecycle import (
     resolve_incident,
     start_incident_investigation,
 )
+from backend.app.schemas.evidence import EvidenceInspectionResponse
 
 router = APIRouter(
     prefix="/api/projects/{project_id}/incidents",
@@ -153,6 +151,68 @@ def get_incident(
         )
 
     return incident
+
+
+@router.get(
+    "/{incident_id}/evidence/{evidence_id}",
+    response_model=EvidenceInspectionResponse,
+)
+def get_evidence(
+    project_id: UUID,
+    incident_id: UUID,
+    evidence_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    get_authorized_project(
+        project_id=project_id,
+        db=db,
+        current_user=current_user,
+    )
+
+    incident = (
+        db.query(Incident)
+        .filter(
+            Incident.id == incident_id,
+            Incident.project_id == project_id,
+        )
+        .first()
+    )
+
+    if incident is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Incident not found.",
+        )
+
+    evidence = (
+        db.query(EvidenceItem)
+        .filter(
+            EvidenceItem.id == evidence_id,
+            EvidenceItem.incident_id == incident_id,
+        )
+        .first()
+    )
+
+    if evidence is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evidence not found.",
+        )
+
+    try:
+        inspection = inspect_evidence(
+            db=db,
+            evidence=evidence,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        )
+
+    return inspection
+
 
 @router.post(
     "/{incident_id}/start-investigation",

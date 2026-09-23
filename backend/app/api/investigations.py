@@ -324,6 +324,12 @@ def generate_investigation_result(
         current_user=current_user,
     )
 
+    if investigation.status == "pending":
+        investigation = start_investigation(
+            db=db,
+            investigation=investigation,
+        )
+
     try:
         # ---------------------------------------------------------------
         # 1. Build investigation context
@@ -411,7 +417,16 @@ def generate_investigation_result(
         )
 
         # ---------------------------------------------------------------
-        # 7. Load persisted evidence links
+        # 7. Mark investigation as completed
+        # ---------------------------------------------------------------
+
+        complete_investigation(
+            db=db,
+            investigation=investigation,
+        )
+
+        # ---------------------------------------------------------------
+        # 8. Load persisted evidence links
         # ---------------------------------------------------------------
 
         evidence_items = get_result_evidence(
@@ -420,7 +435,7 @@ def generate_investigation_result(
         )
 
         # ---------------------------------------------------------------
-        # 8. Return result + evaluation metadata
+        # 9. Return result + evaluation metadata
         # ---------------------------------------------------------------
 
         return {
@@ -447,6 +462,7 @@ def generate_investigation_result(
             "supporting_evidence": [
                 {
                     "id": str(evidence.id),
+                    "evidence_id": str(evidence.id),
                     "source_type": evidence.source_type,
                     "source_id": str(evidence.source_id),
                     "title": evidence.title,
@@ -541,6 +557,7 @@ def get_existing_investigation_result(
         "supporting_evidence": [
             {
                 "id": str(evidence.id),
+                "evidence_id": str(evidence.id),
                 "source_type": evidence.source_type,
                 "source_id": str(evidence.source_id),
                 "title": evidence.title,

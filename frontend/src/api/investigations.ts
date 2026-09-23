@@ -1,4 +1,7 @@
-import type { Investigation } from "../types";
+import type {
+  Investigation,
+  InvestigationResult,
+} from "../types";
 
 import request from "./client";
 
@@ -33,5 +36,28 @@ export async function startInvestigation(
     {
       method: "POST",
     },
+  );
+}
+
+export async function generateInvestigationResult(
+  projectId: string,
+  incidentId: string,
+  investigationId: string,
+): Promise<InvestigationResult> {
+  return request<InvestigationResult>(
+    `/api/projects/${projectId}/incidents/${incidentId}/investigations/${investigationId}/generate-result`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export async function getInvestigationResult(
+  projectId: string,
+  incidentId: string,
+  investigationId: string,
+): Promise<InvestigationResult> {
+  return request<InvestigationResult>(
+    `/api/projects/${projectId}/incidents/${incidentId}/investigations/${investigationId}/result`,
   );
 }
