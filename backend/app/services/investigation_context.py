@@ -303,6 +303,8 @@ class InvestigationResultContext:
     """
 
     hypothesis: InvestigationHypothesis
+    investigation_id: UUID | None = None
+    incident_id: UUID | None = None
 
 @dataclass(frozen=True)
 class ReasoningInput:
