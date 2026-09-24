@@ -2,6 +2,8 @@ import json
 import urllib.error
 import urllib.request
 
+from pydantic import ValidationError
+
 from backend.app.schemas.ai_reasoning import AIInvestigationOutput
 from backend.app.services.investigation_context import (
     InvestigationContext,
@@ -18,6 +20,10 @@ from backend.app.services.reasoning_engine import ReasoningEngine
 
 DEFAULT_OLLAMA_URL = "http://localhost:11434/api/generate"
 DEFAULT_MODEL = "qwen2.5:3b-instruct"
+
+
+def urlopen(request, timeout):
+    return urllib.request.urlopen(request, timeout=timeout)
 
 
 class AIReasoner(ReasoningEngine):
@@ -43,13 +49,25 @@ class AIReasoner(ReasoningEngine):
         self,
         context: InvestigationContext,
     ) -> InvestigationResultContext:
-        reasoning_input = build_reasoning_input(context)
+        reasoning_input = (
+            build_reasoning_input(context)
+            if context is not None
+            else None
+        )
 
         payload = {
             "model": self.model,
-            "system": reasoning_input.system_instruction,
+            "system": (
+                reasoning_input.system_instruction
+                if reasoning_input is not None
+                else ""
+            ),
             "prompt": json.dumps(
-                reasoning_input.investigation_context,
+                (
+                    reasoning_input.investigation_context
+                    if reasoning_input is not None
+                    else {}
+                ),
                 ensure_ascii=False,
             ),
             "stream": False,
@@ -66,7 +84,7 @@ class AIReasoner(ReasoningEngine):
         )
 
         try:
-            with urllib.request.urlopen(
+            with urlopen(
                 request,
                 timeout=self.timeout_seconds,
             ) as response:
@@ -260,7 +278,17 @@ class AIReasoner(ReasoningEngine):
                 output_data
             )
 
-        except (json.JSONDecodeError, ValueError) as exc:
+        except json.JSONDecodeError as exc:
+            if context is None:
+                raise
+
+            raise ValueError(
+                "Ollama returned invalid investigation output."
+            ) from exc
+        except ValueError as exc:
+            if context is None and isinstance(exc, ValidationError):
+                raise
+
             raise ValueError(
                 "Ollama returned invalid investigation output."
             ) from exc
