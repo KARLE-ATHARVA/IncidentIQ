@@ -203,3 +203,111 @@ def test_top_k_limit_is_rejected(db_session):
             query_embedding=[1.0] + [0.0] * 383,
             top_k=21,
         )
+
+def test_similarity_threshold_filters_weak_matches(db_session):
+    project_id = uuid4()
+    service_id = uuid4()
+
+    strong = create_historical_incident(
+        db_session,
+        project_id,
+        service_id,
+        "Strong match",
+        [1.0] + [0.0] * 383,
+    )
+
+    weak = create_historical_incident(
+        db_session,
+        project_id,
+        service_id,
+        "Weak match",
+        [0.0, 1.0] + [0.0] * 382,
+    )
+
+    results = retrieve_similar_historical_incidents(
+        db=db_session,
+        project_id=project_id,
+        query_embedding=[1.0] + [0.0] * 383,
+        top_k=5,
+        similarity_threshold=0.65,
+    )
+
+    assert len(results) == 1
+    assert results[0].historical_incident_id == strong.id
+    assert results[0].similarity_score >= 0.65
+
+def test_retrieval_can_be_filtered_by_service(db_session):
+    project_id = uuid4()
+    checkout_service_id = uuid4()
+    payments_service_id = uuid4()
+
+    checkout_incident = create_historical_incident(
+        db_session,
+        project_id,
+        checkout_service_id,
+        "Checkout incident",
+        [1.0] + [0.0] * 383,
+    )
+
+    create_historical_incident(
+        db_session,
+        project_id,
+        payments_service_id,
+        "Payments incident",
+        [1.0] + [0.0] * 383,
+    )
+
+    results = retrieve_similar_historical_incidents(
+        db=db_session,
+        project_id=project_id,
+        query_embedding=[1.0] + [0.0] * 383,
+        top_k=5,
+        service_id=checkout_service_id,
+    )
+
+    assert len(results) == 1
+    assert results[0].historical_incident_id == checkout_incident.id
+    assert results[0].service_id == checkout_service_id
+
+def test_invalid_similarity_threshold_is_rejected(db_session):
+    project_id = uuid4()
+
+    with pytest.raises(ValueError, match="similarity_threshold must be between 0.0 and 1.0"):
+        retrieve_similar_historical_incidents(
+            db=db_session,
+            project_id=project_id,
+            query_embedding=[1.0] + [0.0] * 383,
+            top_k=5,
+            similarity_threshold=-0.1,
+        )
+
+    with pytest.raises(ValueError, match="similarity_threshold must be between 0.0 and 1.0"):
+        retrieve_similar_historical_incidents(
+            db=db_session,
+            project_id=project_id,
+            query_embedding=[1.0] + [0.0] * 383,
+            top_k=5,
+            similarity_threshold=1.1,
+        )
+
+def test_retrieval_returns_empty_when_no_match_meets_threshold(db_session):
+    project_id = uuid4()
+    service_id = uuid4()
+
+    create_historical_incident(
+        db_session,
+        project_id,
+        service_id,
+        "Unrelated incident",
+        [0.0, 1.0] + [0.0] * 382,
+    )
+
+    results = retrieve_similar_historical_incidents(
+        db=db_session,
+        project_id=project_id,
+        query_embedding=[1.0] + [0.0] * 383,
+        top_k=5,
+        similarity_threshold=0.65,
+    )
+
+    assert results == []
