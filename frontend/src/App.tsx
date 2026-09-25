@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import AppLayout from "./layouts/AppLayout";
 
@@ -15,10 +15,27 @@ import IncidentsPage from "./pages/IncidentsPage";
 import IncidentWorkspacePage from "./pages/IncidentWorkspacePage";
 
 
+function RootRedirect() {
+  const token = localStorage.getItem("access_token");
+
+  return (
+    <Navigate
+      to={token ? "/dashboard" : "/login"}
+      replace
+    />
+  );
+}
+
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+
+        <Route
+          path="/"
+          element={<RootRedirect />}
+        />
 
         <Route
           path="/login"
@@ -52,6 +69,11 @@ function App() {
           </Route>
 
         </Route>
+
+        <Route
+          path="*"
+          element={<Navigate to="/" replace />}
+        />
 
       </Routes>
     </BrowserRouter>
