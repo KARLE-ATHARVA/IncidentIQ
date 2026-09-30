@@ -241,3 +241,202 @@ def test_log_time_filter_and_limit():
 
     assert len(filtered_logs) == 1
     assert filtered_logs[0]["message"] == "Test log 2"
+
+
+def test_log_end_time_filter():
+    headers, project_id, service_id = create_user_and_service()
+
+    now = datetime.now(timezone.utc)
+
+    timestamps = [
+        now - timedelta(minutes=30),
+        now - timedelta(minutes=20),
+        now - timedelta(minutes=10),
+    ]
+
+    for index, timestamp in enumerate(timestamps):
+        response = client.post(
+            f"/api/projects/{project_id}/services/{service_id}/logs",
+            json={
+                "timestamp": timestamp.isoformat(),
+                "level": "INFO",
+                "message": f"End filter log {index}",
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 201
+
+    end_time = (now - timedelta(minutes=15)).isoformat()
+
+    response = client.get(
+        f"/api/projects/{project_id}/services/{service_id}/logs",
+        params={
+            "end_time": end_time,
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+
+    filtered_logs = response.json()
+
+    assert len(filtered_logs) == 2
+    assert filtered_logs[0]["message"] == "End filter log 1"
+    assert filtered_logs[1]["message"] == "End filter log 0"
+
+
+def test_metric_time_filters_and_limit():
+    headers, project_id, service_id = create_user_and_service()
+
+    now = datetime.now(timezone.utc)
+
+    timestamps = [
+        now - timedelta(minutes=30),
+        now - timedelta(minutes=20),
+        now - timedelta(minutes=10),
+    ]
+
+    for index, timestamp in enumerate(timestamps):
+        response = client.post(
+            f"/api/projects/{project_id}/services/{service_id}/metrics",
+            json={
+                "timestamp": timestamp.isoformat(),
+                "name": "checkout_latency",
+                "value": float(index + 1),
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 201
+
+    response = client.get(
+        f"/api/projects/{project_id}/services/{service_id}/metrics",
+        params={
+            "start_time": (
+                now - timedelta(minutes=25)
+            ).isoformat(),
+            "end_time": (
+                now - timedelta(minutes=5)
+            ).isoformat(),
+            "limit": 2,
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+
+    metrics = response.json()
+
+    assert len(metrics) == 2
+    assert metrics[0]["value"] == 3.0
+    assert metrics[1]["value"] == 2.0
+
+
+def test_deployment_time_filters_and_limit():
+    headers, project_id, service_id = create_user_and_service()
+
+    now = datetime.now(timezone.utc)
+
+    timestamps = [
+        now - timedelta(minutes=30),
+        now - timedelta(minutes=20),
+        now - timedelta(minutes=10),
+    ]
+
+    for index, timestamp in enumerate(timestamps):
+        response = client.post(
+            f"/api/projects/{project_id}/services/{service_id}/deployments",
+            json={
+                "timestamp": timestamp.isoformat(),
+                "version": f"v1.{index}.0",
+                "description": f"Deployment {index}",
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 201
+
+    response = client.get(
+        f"/api/projects/{project_id}/services/{service_id}/deployments",
+        params={
+            "start_time": (
+                now - timedelta(minutes=25)
+            ).isoformat(),
+            "end_time": (
+                now - timedelta(minutes=5)
+            ).isoformat(),
+            "limit": 2,
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+
+    deployments = response.json()
+
+    assert len(deployments) == 2
+    assert deployments[0]["version"] == "v1.2.0"
+    assert deployments[1]["version"] == "v1.1.0"
+
+
+def test_detect_nonexistent_metric_returns_404():
+    headers, project_id, service_id = create_user_and_service()
+
+    response = client.post(
+        f"/api/projects/{project_id}/services/"
+        f"{service_id}/metrics/{uuid4()}/detect",
+        headers=headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Metric event not found."
+
+
+def test_process_incident_nonexistent_metric_returns_404():
+    headers, project_id, service_id = create_user_and_service()
+
+    response = client.post(
+        f"/api/projects/{project_id}/services/"
+        f"{service_id}/metrics/{uuid4()}/process-incident",
+        headers=headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Metric event not found."
+
+
+def test_process_metric_without_qualifying_incident():
+    headers, project_id, service_id = create_user_and_service()
+
+    timestamp = datetime.now(timezone.utc).isoformat()
+
+    create_response = client.post(
+        f"/api/projects/{project_id}/services/{service_id}/metrics",
+        json={
+            "timestamp": timestamp,
+            "name": "checkout_latency",
+            "value": 100.0,
+        },
+        headers=headers,
+    )
+
+    assert create_response.status_code == 201
+
+    metric_id = create_response.json()["id"]
+
+    response = client.post(
+        f"/api/projects/{project_id}/services/"
+        f"{service_id}/metrics/{metric_id}/process-incident",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["incident_created"] is False
+    assert (
+        data["message"]
+        == "Metric event did not produce a qualifying incident."
+    )

@@ -1,10 +1,17 @@
 from uuid import uuid4
 
+import pytest
+
 from backend.app.services.investigation_context import (
+    EvidenceContext,
     IncidentContext,
     InvestigationContext,
     InvestigationHypothesis,
     InvestigationResultContext,
+)
+from backend.app.services.investigation_reasoning import (
+    DeterministicReasoner,
+    generate_deterministic_investigation,
 )
 from backend.app.services.reasoning_engine import ReasoningEngine
 
@@ -36,7 +43,11 @@ class StubReasoningEngine(ReasoningEngine):
         )
 
 
-def build_context() -> InvestigationContext:
+def build_context(
+    *,
+    timeline_events: list[dict] | None = None,
+    evidence_count: int = 1,
+) -> InvestigationContext:
     incident_id = uuid4()
 
     incident = IncidentContext(
@@ -49,10 +60,22 @@ def build_context() -> InvestigationContext:
         resolved_at=None,
     )
 
+    evidence_items = [
+        EvidenceContext(
+            evidence_id=uuid4(),
+            source_type="metric",
+            source_id=uuid4(),
+            title=f"Evidence {index + 1}",
+            description="Controlled test evidence.",
+            collected_at=None,
+        )
+        for index in range(evidence_count)
+    ]
+
     return InvestigationContext(
         incident=incident,
-        timeline_events=[],
-        evidence_items=[],
+        timeline_events=timeline_events or [],
+        evidence_items=evidence_items,
         historical_incidents=[],
     )
 
@@ -71,3 +94,114 @@ def test_reasoning_engine_can_be_implemented():
 
 def test_reasoning_engine_is_an_abstract_contract():
     assert ReasoningEngine.__abstractmethods__ == {"generate"}
+
+
+def test_deterministic_reasoner_uses_deployment_error_and_metric_signals():
+    context = build_context(
+        timeline_events=[
+            {
+                "event_type": "deployment",
+                "timestamp": "2026-09-24T10:00:00Z",
+            },
+            {
+                "event_type": "log",
+                "timestamp": "2026-09-24T10:01:00Z",
+                "severity": "error",
+            },
+            {
+                "event_type": "metric",
+                "timestamp": "2026-09-24T10:02:00Z",
+            },
+        ]
+    )
+
+    result = DeterministicReasoner().generate(context)
+
+    assert result.hypothesis.confidence == 0.70
+    assert "deployment may have contributed" in result.hypothesis.hypothesis
+    assert len(result.hypothesis.alternative_explanations) == 2
+    assert len(result.hypothesis.next_steps) == 3
+    assert result.hypothesis.supporting_evidence_ids == [
+        evidence.evidence_id for evidence in context.evidence_items
+    ]
+
+
+def test_deterministic_reasoner_uses_error_and_metric_signals():
+    context = build_context(
+        timeline_events=[
+            {
+                "event_type": "log",
+                "timestamp": "2026-09-24T10:01:00Z",
+                "severity": "critical",
+            },
+            {
+                "event_type": "metric",
+                "timestamp": "2026-09-24T10:02:00Z",
+            },
+        ]
+    )
+
+    result = DeterministicReasoner().generate(context)
+
+    assert result.hypothesis.confidence == 0.60
+    assert "metric anomaly may be associated" in result.hypothesis.hypothesis
+    assert len(result.hypothesis.alternative_explanations) == 2
+    assert len(result.hypothesis.next_steps) == 3
+
+
+def test_deterministic_reasoner_uses_fallback_when_signals_are_insufficient():
+    context = build_context(
+        timeline_events=[
+            {
+                "event_type": "metric",
+                "timestamp": "2026-09-24T10:02:00Z",
+            }
+        ]
+    )
+
+    result = DeterministicReasoner().generate(context)
+
+    assert result.hypothesis.confidence == 0.35
+    assert "insufficient" in result.hypothesis.hypothesis
+    assert "Insufficient telemetry." in result.hypothesis.alternative_explanations
+    assert len(result.hypothesis.next_steps) == 3
+
+
+def test_deterministic_reasoner_requires_evidence():
+    context = build_context(
+        timeline_events=[
+            {
+                "event_type": "metric",
+                "timestamp": "2026-09-24T10:02:00Z",
+            }
+        ],
+        evidence_count=0,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Cannot generate an investigation result without evidence",
+    ):
+        DeterministicReasoner().generate(context)
+
+
+def test_backward_compatible_deterministic_helper():
+    context = build_context(
+        timeline_events=[
+            {
+                "event_type": "log",
+                "timestamp": "2026-09-24T10:01:00Z",
+                "severity": "error",
+            },
+            {
+                "event_type": "metric",
+                "timestamp": "2026-09-24T10:02:00Z",
+            },
+        ]
+    )
+
+    result = generate_deterministic_investigation(context)
+
+    assert isinstance(result, InvestigationResultContext)
+    assert result.hypothesis.confidence == 0.60
+    assert result.hypothesis.hypothesis

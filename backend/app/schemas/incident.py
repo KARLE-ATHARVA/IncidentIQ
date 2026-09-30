@@ -34,6 +34,7 @@ class IncidentDetail(BaseModel):
 
 class IncidentStatusResponse(BaseModel):
     id: UUID
+    incident_id: UUID
     status: str
     resolved_at: datetime | None
 

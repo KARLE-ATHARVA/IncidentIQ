@@ -207,7 +207,7 @@ def detect_anomaly(
     ):
         raise ValueError(
             "minimum_anomalous_observations cannot exceed "
-            "persistence_window + 1"
+            "persistence_window  1 (persistence_window + 1)"
         )
 
     if config.z_score_threshold <= 0:
@@ -319,6 +319,7 @@ def detect_anomaly(
 
     zero_mad_anomaly = (
         mad_value == 0
+        and standard_deviation != 0
         and current_value != median_value
     )
 
@@ -372,6 +373,7 @@ def detect_anomaly(
 
         value_zero_mad_anomaly = (
             mad_value == 0
+            and standard_deviation != 0
             and value != median_value
         )
 

@@ -11,9 +11,7 @@ from backend.app.models.metric_event import MetricEvent
 from backend.app.models.project import Project
 from backend.app.models.service import Service
 from backend.app.models.user import User
-from backend.app.services.evidence_inspection import (
-    inspect_evidence,
-)
+from backend.app.services.evidence_inspection import inspect_evidence
 
 
 def utc_now():
@@ -44,6 +42,7 @@ def create_incident(db_session):
         name=f"Evidence Test Service {uuid4()}",
         project_id=project.id,
     )
+
     db_session.add(service)
     db_session.flush()
 
@@ -295,6 +294,155 @@ def test_unsupported_evidence_source_type_raises_error(db_session):
     with pytest.raises(
         ValueError,
         match="Unsupported evidence source type",
+    ):
+        inspect_evidence(
+            db=db_session,
+            evidence=evidence,
+        )
+
+
+def test_inspect_telemetry_evidence_resolves_metric(db_session):
+    incident, service = create_incident(db_session)
+
+    metric_id = uuid4()
+
+    metric = MetricEvent(
+        id=metric_id,
+        service_id=service.id,
+        timestamp=utc_now(),
+        name="checkout_latency",
+        value=180.0,
+    )
+
+    evidence = EvidenceItem(
+        id=uuid4(),
+        incident_id=incident.id,
+        source_type="telemetry",
+        source_id=metric_id,
+        title="Generic telemetry metric",
+        description="Telemetry evidence referencing a metric.",
+        collected_at=utc_now(),
+    )
+
+    db_session.add(metric)
+    db_session.add(evidence)
+    db_session.commit()
+
+    inspection = inspect_evidence(
+        db=db_session,
+        evidence=evidence,
+    )
+
+    assert inspection.source_type == "telemetry"
+    assert inspection.source_id == metric_id
+    assert inspection.service_id == service.id
+    assert inspection.timestamp == metric.timestamp
+    assert inspection.details["metric_name"] == "checkout_latency"
+    assert inspection.details["value"] == 180.0
+
+
+def test_inspect_telemetry_evidence_resolves_log(db_session):
+    incident, service = create_incident(db_session)
+
+    log_id = uuid4()
+
+    log = LogEvent(
+        id=log_id,
+        service_id=service.id,
+        timestamp=utc_now(),
+        level="ERROR",
+        message="Payment provider timeout.",
+    )
+
+    evidence = EvidenceItem(
+        id=uuid4(),
+        incident_id=incident.id,
+        source_type="telemetry",
+        source_id=log_id,
+        title="Generic telemetry log",
+        description="Telemetry evidence referencing a log.",
+        collected_at=utc_now(),
+    )
+
+    db_session.add(log)
+    db_session.add(evidence)
+    db_session.commit()
+
+    inspection = inspect_evidence(
+        db=db_session,
+        evidence=evidence,
+    )
+
+    assert inspection.source_type == "telemetry"
+    assert inspection.source_id == log_id
+    assert inspection.service_id == service.id
+    assert inspection.timestamp == log.timestamp
+    assert inspection.details["level"] == "ERROR"
+    assert inspection.details["message"] == "Payment provider timeout."
+
+
+def test_inspect_telemetry_evidence_resolves_deployment(db_session):
+    incident, service = create_incident(db_session)
+
+    deployment_id = uuid4()
+
+    deployment = DeploymentEvent(
+        id=deployment_id,
+        service_id=service.id,
+        timestamp=utc_now(),
+        version="v2.5.0",
+        description="Checkout service deployment.",
+    )
+
+    evidence = EvidenceItem(
+        id=uuid4(),
+        incident_id=incident.id,
+        source_type="telemetry",
+        source_id=deployment_id,
+        title="Generic telemetry deployment",
+        description="Telemetry evidence referencing a deployment.",
+        collected_at=utc_now(),
+    )
+
+    db_session.add(deployment)
+    db_session.add(evidence)
+    db_session.commit()
+
+    inspection = inspect_evidence(
+        db=db_session,
+        evidence=evidence,
+    )
+
+    assert inspection.source_type == "telemetry"
+    assert inspection.source_id == deployment_id
+    assert inspection.service_id == service.id
+    assert inspection.timestamp == deployment.timestamp
+    assert inspection.details["version"] == "v2.5.0"
+    assert (
+        inspection.details["deployment_description"]
+        == "Checkout service deployment."
+    )
+
+
+def test_inspect_missing_telemetry_source_raises_error(db_session):
+    incident, _ = create_incident(db_session)
+
+    evidence = EvidenceItem(
+        id=uuid4(),
+        incident_id=incident.id,
+        source_type="telemetry",
+        source_id=uuid4(),
+        title="Missing telemetry",
+        description="The original telemetry source no longer exists.",
+        collected_at=utc_now(),
+    )
+
+    db_session.add(evidence)
+    db_session.commit()
+
+    with pytest.raises(
+        ValueError,
+        match="Telemetry source for evidence was not found",
     ):
         inspect_evidence(
             db=db_session,

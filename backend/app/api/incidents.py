@@ -246,10 +246,16 @@ def start_investigation(
         )
 
     try:
-        return start_incident_investigation(
+        updated_incident = start_incident_investigation(
             db=db,
             incident=incident,
         )
+        return {
+            "id": updated_incident.id,
+            "incident_id": updated_incident.id,
+            "status": updated_incident.status,
+            "resolved_at": updated_incident.resolved_at,
+        }
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -289,10 +295,16 @@ def resolve(
         )
 
     try:
-        return resolve_incident(
+        updated_incident = resolve_incident(
             db=db,
             incident=incident,
         )
+        return {
+            "id": updated_incident.id,
+            "incident_id": updated_incident.id,
+            "status": updated_incident.status,
+            "resolved_at": updated_incident.resolved_at,
+        }
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
