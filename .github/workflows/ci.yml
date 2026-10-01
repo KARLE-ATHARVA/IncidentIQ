@@ -59,6 +59,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
 
+      - name: Enable pgvector extension
+        env:
+          PGPASSWORD: incidentiq_dev
+        run: |
+          psql \
+            -h localhost \
+            -p 5432 \
+            -U incidentiq \
+            -d incidentiq \
+            -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
       - name: Run database migrations
         run: |
           alembic -c backend/alembic.ini upgrade head
