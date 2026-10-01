@@ -5,17 +5,17 @@ import Sidebar from "../components/Sidebar";
 
 function AppLayout() {
   return (
-    <div>
+    <>
       <Header />
 
-      <div>
+      <div className="app-shell">
         <Sidebar />
 
-        <main>
+        <main className="app-main">
           <Outlet />
         </main>
       </div>
-    </div>
+    </>
   );
 }
 

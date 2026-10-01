@@ -5,75 +5,153 @@ interface InvestigationEvidencePanelProps {
   onClose: () => void;
 }
 
+function formatValue(value: unknown): string {
+  if (typeof value === "object" && value !== null) {
+    return JSON.stringify(value, null, 2);
+  }
+
+  return String(value);
+}
+
+function formatDate(value: string): string {
+  return new Date(value).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "medium",
+  });
+}
+
 function InvestigationEvidencePanel({
   evidence,
   onClose,
 }: InvestigationEvidencePanelProps) {
+  const sourceDetails = Object.entries(evidence.details);
+
   return (
-    <section>
-      <h3>Evidence Inspection</h3>
+    <section className="evidence-inspection">
+      <header className="evidence-inspection-header">
+        <div>
+          <div className="evidence-inspection-eyebrow">
+            EVIDENCE PROVENANCE
+          </div>
 
-      <p>
-        <strong>Title:</strong> {evidence.title}
-      </p>
+          <h3>Evidence Inspection</h3>
 
-      <p>
-        <strong>Source type:</strong> {evidence.source_type}
-      </p>
+          <p>
+            Inspect the original engineering evidence behind the
+            investigation.
+          </p>
+        </div>
 
-      <p>
-        <strong>Source ID:</strong> {evidence.source_id}
-      </p>
+        <button
+          type="button"
+          className="evidence-close-button"
+          onClick={onClose}
+        >
+          Close
+        </button>
+      </header>
 
-      {evidence.service_id && (
-        <p>
-          <strong>Service ID:</strong> {evidence.service_id}
-        </p>
-      )}
+      {/* Evidence identity */}
+      <section className="evidence-identity">
+        <div className="evidence-identity-top">
+          <div>
+            <span className="evidence-source-label">
+              SOURCE EVIDENCE
+            </span>
 
-      {evidence.timestamp && (
-        <p>
-          <strong>Event time:</strong>{" "}
-          {new Date(evidence.timestamp).toLocaleString()}
-        </p>
-      )}
+            <h4>{evidence.title}</h4>
+          </div>
 
-      <p>
-        <strong>Collected:</strong>{" "}
-        {new Date(evidence.collected_at).toLocaleString()}
-      </p>
+          <span className="evidence-source-badge">
+            {evidence.source_type}
+          </span>
+        </div>
 
-      <p>
-        <strong>Description:</strong> {evidence.description}
-      </p>
+        <p>{evidence.description}</p>
+      </section>
 
-      <h4>Source Details</h4>
+      {/* Metadata */}
+      <section className="evidence-metadata">
+        <div className="evidence-metadata-item">
+          <span>Source ID</span>
+          <code>{evidence.source_id}</code>
+        </div>
 
-      {Object.entries(evidence.details).length === 0 ? (
-        <p>No source-specific details available.</p>
-      ) : (
-        <dl>
-          {Object.entries(evidence.details).map(
-            ([key, value]) => (
-              <div key={key}>
-                <dt>
-                  <strong>{key}</strong>
-                </dt>
+        {evidence.service_id && (
+          <div className="evidence-metadata-item">
+            <span>Service ID</span>
+            <code>{evidence.service_id}</code>
+          </div>
+        )}
 
-                <dd>
-                  {typeof value === "object"
-                    ? JSON.stringify(value)
-                    : String(value)}
-                </dd>
+        {evidence.timestamp && (
+          <div className="evidence-metadata-item">
+            <span>Event time</span>
+            <strong>
+              {formatDate(evidence.timestamp)}
+            </strong>
+          </div>
+        )}
+
+        <div className="evidence-metadata-item">
+          <span>Collected</span>
+          <strong>
+            {formatDate(evidence.collected_at)}
+          </strong>
+        </div>
+      </section>
+
+      {/* Source details */}
+      <section className="evidence-source-details">
+        <div className="evidence-section-heading">
+          <div>
+            <div className="evidence-section-label">
+              RAW CONTEXT
+            </div>
+
+            <h4>Source details</h4>
+          </div>
+
+          <span>
+            {sourceDetails.length}{" "}
+            {sourceDetails.length === 1
+              ? "field"
+              : "fields"}
+          </span>
+        </div>
+
+        {sourceDetails.length === 0 ? (
+          <div className="evidence-empty-details">
+            No source-specific details available.
+          </div>
+        ) : (
+          <div className="evidence-detail-list">
+            {sourceDetails.map(([key, value]) => (
+              <div
+                key={key}
+                className="evidence-detail-row"
+              >
+                <div className="evidence-detail-key">
+                  {key}
+                </div>
+
+                <pre className="evidence-detail-value">
+                  {formatValue(value)}
+                </pre>
               </div>
-            ),
-          )}
-        </dl>
-      )}
+            ))}
+          </div>
+        )}
+      </section>
 
-      <button type="button" onClick={onClose}>
-        Close Evidence
-      </button>
+      <footer className="evidence-inspection-footer">
+        <span className="evidence-footer-dot" />
+
+        <span>
+          This evidence is presented as source context for the
+          investigation.
+        </span>
+      </footer>
     </section>
   );
 }

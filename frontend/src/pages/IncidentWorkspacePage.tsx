@@ -28,6 +28,41 @@ import type {
 import type { TimelineResponse } from "../types/timeline";
 import type { SimilarHistoricalIncident } from "../types/historicalRetrieval";
 
+function getSeverityClass(severity: string): string {
+  switch (severity.toLowerCase()) {
+    case "critical":
+      return "badge badge-critical";
+    case "high":
+      return "badge badge-high";
+    case "medium":
+      return "badge badge-medium";
+    case "low":
+      return "badge badge-low";
+    default:
+      return "badge";
+  }
+}
+
+function getStatusClass(status: string): string {
+  switch (status.toLowerCase()) {
+    case "open":
+      return "badge badge-open";
+    case "investigating":
+      return "badge badge-investigating";
+    case "resolved":
+      return "badge badge-resolved";
+    default:
+      return "badge";
+  }
+}
+
+function formatDate(value: string): string {
+  return new Date(value).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
 function IncidentWorkspacePage() {
   const { projectId, incidentId } = useParams<{
     projectId: string;
@@ -37,11 +72,8 @@ function IncidentWorkspacePage() {
   const navigate = useNavigate();
 
   const [incident, setIncident] = useState<Incident | null>(null);
-
-  const [investigation, setInvestigation] = useState<Investigation | null>(
-    null,
-  );
-
+  const [investigation, setInvestigation] =
+    useState<Investigation | null>(null);
   const [investigationResult, setInvestigationResult] =
     useState<InvestigationResult | null>(null);
 
@@ -49,13 +81,16 @@ function IncidentWorkspacePage() {
     useState<InvestigationEvidence | null>(null);
 
   const [loadingEvidence, setLoadingEvidence] = useState(false);
-  const [evidenceError, setEvidenceError] = useState<string | null>(null);
+  const [evidenceError, setEvidenceError] =
+    useState<string | null>(null);
 
-  const [timeline, setTimeline] = useState<TimelineResponse | null>(null);
+  const [timeline, setTimeline] =
+    useState<TimelineResponse | null>(null);
 
-  const [similarHistoricalIncidents, setSimilarHistoricalIncidents] = useState<
-    SimilarHistoricalIncident[]
-  >([]);
+  const [
+    similarHistoricalIncidents,
+    setSimilarHistoricalIncidents,
+  ] = useState<SimilarHistoricalIncident[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -63,7 +98,8 @@ function IncidentWorkspacePage() {
   const [generating, setGenerating] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
-  const [resultError, setResultError] = useState<string | null>(null);
+  const [resultError, setResultError] =
+    useState<string | null>(null);
 
   useEffect(() => {
     async function loadWorkspace() {
@@ -80,18 +116,24 @@ function IncidentWorkspacePage() {
         setSelectedEvidence(null);
         setEvidenceError(null);
 
-        const [incidentData, investigations, timelineData, historicalData] =
-          await Promise.all([
-            getIncident(projectId, incidentId),
-            getInvestigations(projectId, incidentId),
-            getIncidentTimeline(projectId, incidentId),
-            getSimilarHistoricalIncidents(projectId, incidentId),
-          ]);
+        const [
+          incidentData,
+          investigations,
+          timelineData,
+          historicalData,
+        ] = await Promise.all([
+          getIncident(projectId, incidentId),
+          getInvestigations(projectId, incidentId),
+          getIncidentTimeline(projectId, incidentId),
+          getSimilarHistoricalIncidents(projectId, incidentId),
+        ]);
 
         setIncident(incidentData);
 
         const currentInvestigation =
-          investigations.length > 0 ? investigations[0] : null;
+          investigations.length > 0
+            ? investigations[0]
+            : null;
 
         setInvestigation(currentInvestigation);
         setTimeline(timelineData);
@@ -99,11 +141,12 @@ function IncidentWorkspacePage() {
 
         if (currentInvestigation) {
           try {
-            const existingResult = await getInvestigationResult(
-              projectId,
-              incidentId,
-              currentInvestigation.id,
-            );
+            const existingResult =
+              await getInvestigationResult(
+                projectId,
+                incidentId,
+                currentInvestigation.id,
+              );
 
             setInvestigationResult(existingResult);
           } catch {
@@ -136,14 +179,19 @@ function IncidentWorkspacePage() {
     setResultError(null);
 
     try {
-      const data = await createInvestigation(projectId, incidentId);
+      const data = await createInvestigation(
+        projectId,
+        incidentId,
+      );
 
       setInvestigation(data);
       setInvestigationResult(null);
       setSelectedEvidence(null);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to create investigation.",
+        err instanceof Error
+          ? err.message
+          : "Failed to create investigation.",
       );
     } finally {
       setCreating(false);
@@ -168,7 +216,9 @@ function IncidentWorkspacePage() {
       setInvestigation(data);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to start investigation.",
+        err instanceof Error
+          ? err.message
+          : "Failed to start investigation.",
       );
     } finally {
       setStarting(false);
@@ -186,16 +236,21 @@ function IncidentWorkspacePage() {
     setEvidenceError(null);
 
     try {
-      const result = await generateInvestigationResult(
-        projectId,
-        incidentId,
-        investigation.id,
-      );
+      const result =
+        await generateInvestigationResult(
+          projectId,
+          incidentId,
+          investigation.id,
+        );
 
       setInvestigationResult(result);
 
       try {
-        const investigations = await getInvestigations(projectId, incidentId);
+        const investigations =
+          await getInvestigations(
+            projectId,
+            incidentId,
+          );
 
         if (investigations.length > 0) {
           setInvestigation(investigations[0]);
@@ -214,7 +269,9 @@ function IncidentWorkspacePage() {
     }
   }
 
-  async function handleInspectEvidence(evidenceId: string) {
+  async function handleInspectEvidence(
+    evidenceId: string,
+  ) {
     if (!projectId || !incidentId) {
       return;
     }
@@ -223,16 +280,19 @@ function IncidentWorkspacePage() {
     setEvidenceError(null);
 
     try {
-      const evidence = await getEvidenceInspection(
-        projectId,
-        incidentId,
-        evidenceId,
-      );
+      const evidence =
+        await getEvidenceInspection(
+          projectId,
+          incidentId,
+          evidenceId,
+        );
 
       setSelectedEvidence(evidence);
     } catch (err) {
       setEvidenceError(
-        err instanceof Error ? err.message : "Failed to inspect evidence.",
+        err instanceof Error
+          ? err.message
+          : "Failed to inspect evidence.",
       );
 
       setSelectedEvidence(null);
@@ -248,171 +308,404 @@ function IncidentWorkspacePage() {
 
   if (loading) {
     return (
-      <div>
-        <p>Loading incident...</p>
+      <div className="page">
+        <div className="workspace-loading">
+          <div className="workspace-loading-mark">IQ</div>
+
+          <div>
+            <div className="state-title">
+              Loading incident workspace
+            </div>
+
+            <div className="state-description">
+              Gathering incident telemetry and investigation
+              context...
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!incident) {
     return (
-      <div>
-        <p>{error ?? "Incident not found."}</p>
+      <div className="page">
+        <div className="state-card error-state workspace-not-found">
+          <div className="state-title">
+            Incident not found
+          </div>
 
-        <button onClick={() => navigate(`/projects/${projectId}/incidents`)}>
-          Back to Incidents
-        </button>
+          <div className="state-description">
+            {error ??
+              "The requested incident could not be loaded."}
+          </div>
+
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={() =>
+              navigate(
+                `/projects/${projectId}/incidents`,
+              )
+            }
+          >
+            ← Back to Incidents
+          </button>
+        </div>
       </div>
     );
   }
 
+  const investigationComplete =
+    investigation?.status === "completed";
+
   return (
-    <div>
-      <button onClick={() => navigate(`/projects/${projectId}/incidents`)}>
-        ← Back to Incidents
-      </button>
-
-      <h1>{incident.title}</h1>
-
-      <p>{incident.description}</p>
-
-      <p>
-        <strong>Severity:</strong> {incident.severity}
-      </p>
-
-      <p>
-        <strong>Status:</strong> {incident.status}
-      </p>
-
-      <p>
-        <strong>Detected:</strong>{" "}
-        {new Date(incident.detected_at).toLocaleString()}
-      </p>
-
-      {incident.resolved_at && (
-        <p>
-          <strong>Resolved:</strong>{" "}
-          {new Date(incident.resolved_at).toLocaleString()}
-        </p>
-      )}
-
-      <hr />
-
-      <h2>Investigation</h2>
-
-      {!investigation && (
-        <button onClick={handleCreateInvestigation} disabled={creating}>
-          {creating ? "Creating..." : "Create Investigation"}
+    <div className="page incident-workspace">
+      <div className="workspace-breadcrumb">
+        <button
+          type="button"
+          onClick={() =>
+            navigate(
+              `/projects/${projectId}/incidents`,
+            )
+          }
+        >
+          ← Incident Inbox
         </button>
-      )}
 
-      {investigation && (
-        <div>
-          <p>
-            <strong>Status:</strong> {investigation.status}
-          </p>
+        <span>/</span>
 
-          <p>
-            <strong>Investigation ID:</strong> {investigation.id}
-          </p>
+        <span>Investigation Workspace</span>
+      </div>
 
-          {investigation.started_at && (
-            <p>
-              <strong>Started:</strong>{" "}
-              {new Date(investigation.started_at).toLocaleString()}
-            </p>
-          )}
-
-          {investigation.completed_at && (
-            <p>
-              <strong>Completed:</strong>{" "}
-              {new Date(investigation.completed_at).toLocaleString()}
-            </p>
-          )}
-
-          {investigation.status === "pending" && (
-            <button onClick={handleStartInvestigation} disabled={starting}>
-              {starting ? "Starting..." : "Start Investigation"}
-            </button>
-          )}
-
-          <div>
-            <br />
-
-            <button
-              onClick={handleGenerateInvestigation}
-              disabled={generating || investigation.status === "pending"}
-            >
-              {generating
-                ? "Generating Investigation..."
-                : investigationResult
-                  ? "Regenerate Investigation"
-                  : "Generate Investigation"}
-            </button>
+      <section className="workspace-hero">
+        <div className="workspace-hero-main">
+          <div className="workspace-eyebrow">
+            INCIDENT INVESTIGATION
           </div>
 
-          {resultError && (
-            <p>
-              <strong>Investigation error:</strong> {resultError}
-            </p>
+          <div className="workspace-badges">
+            <span
+              className={getSeverityClass(
+                incident.severity,
+              )}
+            >
+              {incident.severity}
+            </span>
+
+            <span
+              className={getStatusClass(
+                incident.status,
+              )}
+            >
+              {incident.status}
+            </span>
+          </div>
+
+          <h1>{incident.title}</h1>
+
+          <p>{incident.description}</p>
+        </div>
+
+        <div className="workspace-hero-meta">
+          <div>
+            <span>Detected</span>
+            <strong>
+              {formatDate(incident.detected_at)}
+            </strong>
+          </div>
+
+          {incident.resolved_at && (
+            <div>
+              <span>Resolved</span>
+              <strong>
+                {formatDate(incident.resolved_at)}
+              </strong>
+            </div>
           )}
         </div>
-      )}
+      </section>
 
-      <hr />
+      <div className="workspace-section-heading">
+        <div>
+          <span className="section-eyebrow">
+            INVESTIGATION
+          </span>
+
+          <h2>Understand what happened</h2>
+
+          <p>
+            Move from detected anomaly to evidence-backed
+            reasoning.
+          </p>
+        </div>
+      </div>
+
+      <section className="workspace-investigation-card">
+        <div className="workspace-investigation-header">
+          <div>
+            <div className="workspace-card-kicker">
+              INVESTIGATION RUN
+            </div>
+
+            <h2>
+              {investigation
+                ? "Investigation in progress"
+                : "Start an investigation"}
+            </h2>
+
+            <p>
+              Build context from the incident timeline,
+              telemetry, deployments, and historical
+              incidents.
+            </p>
+          </div>
+
+          {investigation && (
+            <span
+              className={getStatusClass(
+                investigation.status,
+              )}
+            >
+              {investigation.status}
+            </span>
+          )}
+        </div>
+
+        {!investigation && (
+          <div className="workspace-action-row">
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={handleCreateInvestigation}
+              disabled={creating}
+            >
+              {creating
+                ? "Creating..."
+                : "Create Investigation"}
+            </button>
+          </div>
+        )}
+
+        {investigation && (
+          <>
+            <div className="workspace-investigation-meta">
+              {investigation.started_at && (
+                <div>
+                  <span>Started</span>
+                  <strong>
+                    {formatDate(
+                      investigation.started_at,
+                    )}
+                  </strong>
+                </div>
+              )}
+
+              {investigation.completed_at && (
+                <div>
+                  <span>Completed</span>
+                  <strong>
+                    {formatDate(
+                      investigation.completed_at,
+                    )}
+                  </strong>
+                </div>
+              )}
+            </div>
+
+            <div className="workspace-action-row">
+              {investigation.status === "pending" && (
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={handleStartInvestigation}
+                  disabled={starting}
+                >
+                  {starting
+                    ? "Starting..."
+                    : "Start Investigation"}
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="button button-primary"
+                onClick={handleGenerateInvestigation}
+                disabled={
+                  generating ||
+                  investigation.status === "pending"
+                }
+              >
+                {generating
+                  ? "Generating Investigation..."
+                  : investigationResult
+                    ? "Regenerate Investigation"
+                    : "Generate Investigation"}
+              </button>
+            </div>
+
+            {resultError && (
+              <div className="workspace-inline-error">
+                <strong>Investigation error</strong>
+                <span>{resultError}</span>
+              </div>
+            )}
+          </>
+        )}
+      </section>
 
       {investigationResult && (
-        <>
-          <InvestigationResultPanel
-            result={investigationResult}
-            onInspectEvidence={handleInspectEvidence}
-          />
+        <section className="workspace-result-section">
+          <div className="workspace-section-heading compact">
+            <div>
+              <span className="section-eyebrow">
+                REASONING
+              </span>
 
-          <hr />
-        </>
-      )}
+              <h2>Evidence-backed hypothesis</h2>
 
-      {loadingEvidence && (
-        <section>
-          <h3>Evidence Inspection</h3>
-          <p>Loading evidence...</p>
+              <p>
+                Review the reasoning, supporting evidence,
+                alternatives, and next steps.
+              </p>
+            </div>
+
+            <span className="workspace-evidence-principle">
+              Evidence before conclusion
+            </span>
+          </div>
+
+          <div className="workspace-result-card">
+            <InvestigationResultPanel
+              result={investigationResult}
+              onInspectEvidence={
+                handleInspectEvidence
+              }
+            />
+          </div>
         </section>
       )}
 
-      {evidenceError && (
-        <section>
-          <h3>Evidence Inspection</h3>
-          <p>{evidenceError}</p>
+      {(loadingEvidence ||
+        evidenceError ||
+        selectedEvidence) && (
+        <section className="workspace-support-section">
+          <div className="workspace-section-heading compact">
+            <div>
+              <span className="section-eyebrow">
+                PROVENANCE
+              </span>
+
+              <h2>Evidence inspection</h2>
+
+              <p>
+                Inspect the source behind an investigation
+                result.
+              </p>
+            </div>
+          </div>
+
+          <div className="workspace-support-card">
+            {loadingEvidence && (
+              <div className="workspace-inline-loading">
+                Loading evidence...
+              </div>
+            )}
+
+            {evidenceError && (
+              <div className="workspace-inline-error">
+                <strong>
+                  Evidence inspection failed
+                </strong>
+
+                <span>{evidenceError}</span>
+              </div>
+            )}
+
+            {selectedEvidence && (
+              <InvestigationEvidencePanel
+                evidence={selectedEvidence}
+                onClose={handleCloseEvidence}
+              />
+            )}
+          </div>
         </section>
-      )}
-
-      {selectedEvidence && (
-        <>
-          <InvestigationEvidencePanel
-            evidence={selectedEvidence}
-            onClose={handleCloseEvidence}
-          />
-
-          <hr />
-        </>
       )}
 
       {timeline && (
-        <>
-          <IncidentTimeline
-            events={timeline.events}
-            startTime={timeline.start_time}
-            endTime={timeline.end_time}
-            detectedAt={incident.detected_at}
-          />
+        <section className="workspace-support-section">
+          <div className="workspace-section-heading compact">
+            <div>
+              <span className="section-eyebrow">
+                RECONSTRUCTION
+              </span>
 
-          <hr />
-        </>
+              <h2>Incident timeline</h2>
+
+              <p>
+                Reconstruct the sequence of events around
+                the detected incident.
+              </p>
+            </div>
+          </div>
+
+          <div className="workspace-support-card">
+            <IncidentTimeline
+              events={timeline.events}
+              startTime={timeline.start_time}
+              endTime={timeline.end_time}
+              detectedAt={incident.detected_at}
+            />
+          </div>
+        </section>
       )}
 
-      <SimilarHistoricalIncidents incidents={similarHistoricalIncidents} />
+      <section className="workspace-support-section">
+        <div className="workspace-section-heading compact">
+          <div>
+            <span className="section-eyebrow">
+              HISTORICAL INTELLIGENCE
+            </span>
 
-      {error && <p>{error}</p>}
+            <h2>Similar incidents</h2>
+
+            <p>
+              Use previous incidents as contextual evidence
+              during investigation.
+            </p>
+          </div>
+        </div>
+
+        <div className="workspace-support-card">
+          <SimilarHistoricalIncidents
+            incidents={similarHistoricalIncidents}
+          />
+        </div>
+      </section>
+
+      {investigationComplete && (
+        <div className="workspace-completion-note">
+          <span className="workspace-completion-icon">
+            ✓
+          </span>
+
+          <div>
+            <strong>Investigation completed</strong>
+
+            <span>
+              The investigation result and its supporting
+              evidence are persisted for future review.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="workspace-inline-error workspace-global-error">
+          <strong>Workspace error</strong>
+          <span>{error}</span>
+        </div>
+      )}
     </div>
   );
 }

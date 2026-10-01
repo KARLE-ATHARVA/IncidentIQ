@@ -4,76 +4,139 @@ interface SimilarHistoricalIncidentsProps {
   incidents: SimilarHistoricalIncident[];
 }
 
+function formatSimilarity(value: number): string {
+  return `${Math.round(value * 100)}%`;
+}
+
+function formatDate(value: string): string {
+  return new Date(value).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
 function SimilarHistoricalIncidents({
   incidents,
 }: SimilarHistoricalIncidentsProps) {
   return (
-    <section>
-      <h2>Similar Historical Incidents</h2>
+    <section className="historical-intelligence">
+      <header className="historical-intelligence-header">
+        <div>
+          <div className="historical-intelligence-eyebrow">
+            HISTORICAL INTELLIGENCE
+          </div>
 
-      <p>
-        Historical incidents with similar telemetry and incident context.
-        Similarity indicates relatedness, not confirmed causality.
-      </p>
+          <h2>Similar Historical Incidents</h2>
+
+          <p>
+            Previously resolved incidents that may
+            provide useful investigation context.
+          </p>
+        </div>
+
+        <div className="historical-match-count">
+          <strong>{incidents.length}</strong>
+
+          <span>
+            {incidents.length === 1
+              ? "similar incident"
+              : "similar incidents"}
+          </span>
+        </div>
+      </header>
 
       {incidents.length === 0 ? (
-        <p>No sufficiently similar historical incidents found.</p>
+        <div className="state-card historical-empty">
+          <div className="historical-empty-icon">
+            ∅
+          </div>
+
+          <p className="state-title">
+            No similar incidents found
+          </p>
+
+          <p className="state-description">
+            No historical incidents met the current
+            similarity threshold.
+          </p>
+        </div>
       ) : (
-        <div>
-          {incidents.map((incident) => {
-            const similarityPercentage = (
-              incident.similarity_score * 100
-            ).toFixed(1);
+        <div className="historical-incident-list">
+          {incidents.map((incident, index) => (
+            <article
+              key={incident.historical_incident_id}
+              className="historical-incident-card"
+            >
+              <div className="historical-incident-rank">
+                <span>
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+              </div>
 
-            return (
-              <article key={incident.historical_incident_id}>
-                <h3>{incident.title}</h3>
+              <div className="historical-incident-content">
+                <div className="historical-incident-heading">
+                  <div>
+                    <div className="historical-incident-title-row">
+                      <h3>{incident.title}</h3>
 
-                <p>
-                  <strong>Similarity:</strong>{" "}
-                  {similarityPercentage}%
-                </p>
+                      <span className="badge badge-resolved">
+                        {incident.severity}
+                      </span>
+                    </div>
 
-                <p>
-                  <strong>Severity:</strong>{" "}
-                  {incident.severity}
-                </p>
+                    <p>
+                      {incident.summary}
+                    </p>
+                  </div>
 
-                <p>
-                  <strong>Summary:</strong>{" "}
-                  {incident.summary}
-                </p>
+                  <div className="historical-similarity">
+                    <strong>
+                      {formatSimilarity(
+                        incident.similarity_score,
+                      )}
+                    </strong>
 
-                <p>
-                  <strong>Symptoms:</strong>{" "}
-                  {incident.symptoms}
-                </p>
+                    <span>similarity</span>
+                  </div>
+                </div>
 
-                {incident.root_cause && (
-                  <p>
-                    <strong>Recorded Root Cause:</strong>{" "}
-                    {incident.root_cause}
-                  </p>
-                )}
+                <div className="historical-incident-meta">
+                  <span>
+                    Occurred{" "}
+                    <strong>
+                      {formatDate(
+                        incident.occurred_at,
+                      )}
+                    </strong>
+                  </span>
 
-                {incident.resolution && (
-                  <p>
-                    <strong>Recorded Resolution:</strong>{" "}
-                    {incident.resolution}
-                  </p>
-                )}
+                  {incident.resolution && (
+                    <span className="historical-resolution">
+                      <span className="historical-resolution-label">
+                        Resolution
+                      </span>
 
-                <p>
-                  <strong>Occurred:</strong>{" "}
-                  {new Date(
-                    incident.occurred_at,
-                  ).toLocaleString()}
-                </p>
+                      {incident.resolution}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
 
-                <hr />
-              </article>
-            );
-          })}
+      {incidents.length > 0 && (
+        <div className="historical-intelligence-note">
+          <span className="historical-note-icon">
+            i
+          </span>
+
+          <span>
+            Historical matches provide context for the
+            investigation; they are not proof of the
+            current incident's root cause.
+          </span>
         </div>
       )}
     </section>

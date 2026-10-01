@@ -45,16 +45,16 @@ function getEventSymbol(
   }
 }
 
-function getEventBorder(
+function getEventClass(
   eventType: TimelineEvent["event_type"],
 ): string {
   switch (eventType) {
     case "metric":
-      return "#2563eb";
+      return "incident-timeline-event-metric";
     case "log":
-      return "#dc2626";
+      return "incident-timeline-event-log";
     case "deployment":
-      return "#7c3aed";
+      return "incident-timeline-event-deployment";
   }
 }
 
@@ -65,230 +65,157 @@ export default function IncidentTimeline({
   detectedAt,
 }: IncidentTimelineProps) {
   return (
-    <section
-      style={{
-        marginTop: "32px",
-        paddingBottom: "24px",
-      }}
-    >
-      <div
-        style={{
-          marginBottom: "24px",
-        }}
-      >
-        <h2
-          style={{
-            marginBottom: "8px",
-          }}
-        >
-          Incident Timeline
-        </h2>
+    <section className="incident-timeline">
+      <header className="incident-timeline-header">
+        <div>
+          <div className="incident-timeline-eyebrow">
+            INCIDENT RECONSTRUCTION
+          </div>
 
-        <p
-          style={{
-            margin: 0,
-            color: "#64748b",
-            fontSize: "14px",
-          }}
-        >
-          Investigation window:{" "}
-          {formatTimestamp(startTime)} →{" "}
-          {formatTimestamp(endTime)}
-        </p>
+          <h2>Incident Timeline</h2>
+
+          <p>
+            Events surrounding the incident detection point,
+            ordered by occurrence.
+          </p>
+        </div>
+
+        <div className="incident-timeline-window">
+          <span>INVESTIGATION WINDOW</span>
+          <strong>
+            {formatTimestamp(startTime)} →{" "}
+            {formatTimestamp(endTime)}
+          </strong>
+        </div>
+      </header>
+
+      <div className="incident-timeline-summary">
+        <div className="incident-timeline-summary-item">
+          <strong>{events.length}</strong>
+          <span>telemetry events</span>
+        </div>
+
+        <div className="incident-timeline-summary-divider" />
+
+        <div className="incident-timeline-summary-item">
+          <strong>
+            {formatTime(detectedAt)}
+          </strong>
+          <span>incident detected</span>
+        </div>
+
+        <div className="incident-timeline-summary-divider" />
+
+        <div className="incident-timeline-legend">
+          <span>
+            <i className="timeline-legend-dot metric" />
+            Metric
+          </span>
+
+          <span>
+            <i className="timeline-legend-dot log" />
+            Log
+          </span>
+
+          <span>
+            <i className="timeline-legend-dot deployment" />
+            Deployment
+          </span>
+        </div>
       </div>
 
       {events.length === 0 ? (
-        <div
-          style={{
-            padding: "20px",
-            border: "1px solid #e2e8f0",
-            borderRadius: "8px",
-            background: "#f8fafc",
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              color: "#64748b",
-            }}
-          >
-            No telemetry events found in this
-            investigation window.
+        <div className="state-card incident-timeline-empty">
+          <p className="state-title">
+            No telemetry events
+          </p>
+
+          <p className="state-description">
+            No metric, log, or deployment events were found
+            in this investigation window.
           </p>
         </div>
       ) : (
-        <div
-          style={{
-            position: "relative",
-            display: "flex",
-            flexDirection: "column",
-            gap: "16px",
-          }}
-        >
-          {events.map((event) => {
-            const borderColor = getEventBorder(
-              event.event_type,
-            );
-
+        <div className="incident-timeline-list">
+          {events.map((event, index) => {
             const isDetectionPoint =
               new Date(event.timestamp).getTime() ===
               new Date(detectedAt).getTime();
 
+            const isLast = index === events.length - 1;
+            const eventClass = getEventClass(
+              event.event_type,
+            );
+
             return (
               <article
                 key={event.id}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns:
-                    "90px 36px 1fr",
-                  gap: "16px",
-                  alignItems: "start",
-                }}
+                className={`incident-timeline-event ${eventClass}${
+                  isDetectionPoint
+                    ? " incident-timeline-event-detected"
+                    : ""
+                }`}
               >
-                {/* Timestamp */}
-                <div
-                  style={{
-                    paddingTop: "10px",
-                    textAlign: "right",
-                    color: isDetectionPoint
-                      ? "#dc2626"
-                      : "#64748b",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                  }}
-                >
-                  {formatTime(event.timestamp)}
+                <div className="incident-timeline-time">
+                  <strong>
+                    {formatTime(event.timestamp)}
+                  </strong>
+
+                  {isDetectionPoint && (
+                    <span>Detection point</span>
+                  )}
                 </div>
 
-                {/* Timeline marker */}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    position: "relative",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "50%",
-                      border: `2px solid ${isDetectionPoint ? "#dc2626" : borderColor}`,
-                      background: "#ffffff",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: isDetectionPoint
-                        ? "#dc2626"
-                        : borderColor,
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      zIndex: 1,
-                    }}
-                  >
-                    {getEventSymbol(
-                      event.event_type,
-                    )}
-                  </div>
-                </div>
-
-                {/* Event content */}
-                <div
-                  style={{
-                    border: "1px solid #e2e8f0",
-                    borderLeft: `4px solid ${isDetectionPoint ? "#dc2626" : borderColor}`,
-                    borderRadius: "8px",
-                    padding: "14px 16px",
-                    background: isDetectionPoint
-                      ? "#fff7f7"
-                      : "#ffffff",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      marginBottom: "8px",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        letterSpacing: "0.05em",
-                        color: borderColor,
-                      }}
-                    >
-                      {getEventLabel(
-                        event.event_type,
-                      )}
-                    </span>
-
-                    {event.severity && (
-                      <span
-                        style={{
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          color: "#dc2626",
-                        }}
-                      >
-                        {event.severity}
-                      </span>
-                    )}
-
-                    {isDetectionPoint && (
-                      <span
-                        style={{
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          letterSpacing: "0.05em",
-                          color: "#dc2626",
-                        }}
-                      >
-                        INCIDENT DETECTED
-                      </span>
-                    )}
-                  </div>
-
-                  <h3
-                    style={{
-                      margin: "0 0 6px",
-                      fontSize: "16px",
-                    }}
-                  >
-                    {event.title}
-                  </h3>
-
-                  {event.description && (
-                    <p
-                      style={{
-                        margin: "0 0 10px",
-                        color: "#475569",
-                        fontSize: "14px",
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {event.description}
-                    </p>
+                <div className="incident-timeline-rail">
+                  {!isLast && (
+                    <div className="incident-timeline-line" />
                   )}
 
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "16px",
-                      color: "#64748b",
-                      fontSize: "12px",
-                    }}
-                  >
+                  <div className="incident-timeline-marker">
+                    {getEventSymbol(event.event_type)}
+                  </div>
+                </div>
+
+                <div className="incident-timeline-card">
+                  <div className="incident-timeline-card-top">
+                    <div className="incident-timeline-card-labels">
+                      <span className="incident-timeline-type">
+                        {getEventLabel(event.event_type)}
+                      </span>
+
+                      {event.severity && (
+                        <span className="badge badge-neutral">
+                          {event.severity}
+                        </span>
+                      )}
+
+                      {isDetectionPoint && (
+                        <span className="badge badge-critical">
+                          Incident detected
+                        </span>
+                      )}
+                    </div>
+
+                    <span className="incident-timeline-full-time">
+                      {formatTimestamp(event.timestamp)}
+                    </span>
+                  </div>
+
+                  <h3>{event.title}</h3>
+
+                  {event.description && (
+                    <p>{event.description}</p>
+                  )}
+
+                  <div className="incident-timeline-metadata">
                     <span>
-                      Service: {event.service_id}
+                      Service{" "}
+                      <code>{event.service_id}</code>
                     </span>
 
                     <span>
-                      Source: {event.source_id}
+                      Source{" "}
+                      <code>{event.source_id}</code>
                     </span>
                   </div>
                 </div>

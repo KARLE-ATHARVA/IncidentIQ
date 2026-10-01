@@ -7,52 +7,134 @@ import { getProjects } from "../api";
 
 function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
-
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    getProjects()
-      .then((data) => {
+    async function loadProjects() {
+      try {
+        const data = await getProjects();
         setProjects(data);
-      })
-      .catch(() => {
-        setError("Failed to load projects");
-      })
-      .finally(() => {
+      } catch {
+        setError("Failed to load projects.");
+      } finally {
         setLoading(false);
-      });
+      }
+    }
+
+    loadProjects();
   }, []);
 
   if (loading) {
-    return <p>Loading projects...</p>;
+    return (
+      <div className="page">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Projects</h1>
+            <p className="page-description">
+              Select a project to investigate its incidents.
+            </p>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="state-card">
+            <p className="state-title">Loading projects</p>
+            <p className="state-description">Fetching your projects...</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <p>{error}</p>;
+    return (
+      <div className="page">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Projects</h1>
+            <p className="page-description">
+              Select a project to investigate its incidents.
+            </p>
+          </div>
+        </div>
+
+        <div className="card error-state">
+          <div className="state-card">
+            <p className="state-title">Unable to load projects</p>
+            <p className="state-description">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h1>Projects</h1>
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Projects</h1>
+
+          <p className="page-description">
+            Select a project to investigate its incidents.
+          </p>
+        </div>
+      </div>
 
       {projects.length === 0 ? (
-        <p>No projects found.</p>
+        <div className="card">
+          <div className="state-card">
+            <p className="state-title">No projects found</p>
+
+            <p className="state-description">
+              There are currently no projects available for your account.
+            </p>
+          </div>
+        </div>
       ) : (
-        <ul>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+            gap: "16px",
+          }}
+        >
           {projects.map((project) => (
-            <li key={project.id}>
-              <button
-                onClick={() => navigate(`/projects/${project.id}/incidents`)}
-              >
-                {project.name}
-              </button>
-            </li>
+            <div className="card" key={project.id}>
+              <div className="card-body">
+                <h2
+                  style={{
+                    margin: "0 0 8px",
+                    fontSize: "18px",
+                    fontWeight: 650,
+                  }}
+                >
+                  {project.name}
+                </h2>
+
+                <p
+                  style={{
+                    margin: "0 0 20px",
+                    color: "#6b7280",
+                    fontSize: "13px",
+                  }}
+                >
+                  Investigate incidents and review engineering evidence.
+                </p>
+
+                <button
+                  type="button"
+                  className="button button-primary"
+                  onClick={() => navigate(`/projects/${project.id}/incidents`)}
+                >
+                  View incidents
+                </button>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
