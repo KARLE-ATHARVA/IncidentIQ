@@ -300,21 +300,6 @@ Healthy system
 
 The reviewer can trace a hypothesis back to its supporting evidence, inspect alternatives and next steps, and decide whether the incident is ready to resolve. For the repeatable walkthrough, see the [Demo Runbook](docs/demo-runbook.md).
 
-## Project status
-
-| Area                        | Status      |
-| --------------------------- | ----------- |
-| Core Engineering            | ✅ Complete |
-| Production Simulator        | ✅ Complete |
-| Failure Injection           | ✅ Complete |
-| Reset / Replay              | ✅ Complete |
-| UI/UX Transformation        | ✅ Complete |
-| Demo Readiness              | ✅ Complete |
-| README / GitHub Credibility | 🟡 Current  |
-| Public Deployment           | ⏸ Later     |
-| Demo Video                  | ⏸ Later     |
-| LinkedIn Launch             | ⏸ Final     |
-
 ## The engineering story
 
 IncidentIQ is a systems and applied-AI project built around a practical constraint: an incident explanation must remain reviewable. It combines statistical detection, weighted signal correlation, persisted incident lifecycles, temporal reconstruction, vector retrieval, structured context engineering, local language-model reasoning, deterministic fallback, and evidence-reference validation.
