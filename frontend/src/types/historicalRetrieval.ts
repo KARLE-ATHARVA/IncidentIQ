@@ -8,5 +8,6 @@ export interface SimilarHistoricalIncident {
   severity: string;
   service_id: string | null;
   occurred_at: string;
+  resolved_at: string | null;
   similarity_score: number;
 }

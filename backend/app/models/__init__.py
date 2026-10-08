@@ -15,7 +15,7 @@ from backend.app.models.historical_incident import HistoricalIncident
 from backend.app.models.historical_incident_embedding import (
     HistoricalIncidentEmbedding,
 )
-
+from backend.app.models.simulation_run import SimulationRun
 __all__ = [
     "User",
     "Project",
@@ -28,4 +28,7 @@ __all__ = [
     "EvidenceItem",
     "InvestigationResult",
     "InvestigationResultEvidence",
+    "HistoricalIncident",
+    "HistoricalIncidentEmbedding",
+    "SimulationRun",
 ]

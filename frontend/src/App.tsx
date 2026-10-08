@@ -6,6 +6,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 import LoginPage from "./pages/LoginPage";
 
+import HomePage from "./pages/HomePage";
+
 import DashboardPage from "./pages/DashboardPage";
 
 import ProjectsPage from "./pages/ProjectsPage";
@@ -14,13 +16,15 @@ import IncidentsPage from "./pages/IncidentsPage";
 
 import IncidentWorkspacePage from "./pages/IncidentWorkspacePage";
 
+import ProductionSimulatorPage from "./pages/ProductionSimulatorPage";
+
 
 function RootRedirect() {
   const token = localStorage.getItem("access_token");
 
   return (
     <Navigate
-      to={token ? "/dashboard" : "/login"}
+      to={token ? "/home" : "/login"}
       replace
     />
   );
@@ -47,6 +51,11 @@ function App() {
           <Route element={<AppLayout />}>
 
             <Route
+              path="/home"
+              element={<HomePage />}
+            />
+
+            <Route
               path="/dashboard"
               element={<DashboardPage />}
             />
@@ -64,6 +73,11 @@ function App() {
             <Route
               path="/projects/:projectId/incidents/:incidentId"
               element={<IncidentWorkspacePage />}
+            />
+
+            <Route
+              path="/projects/:projectId/simulator"
+              element={<ProductionSimulatorPage />}
             />
 
           </Route>

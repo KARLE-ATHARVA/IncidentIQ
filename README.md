@@ -26,3 +26,8 @@ It connects application telemetry, incident signals, engineering changes, histor
 ## Status
 
 Under active development.
+
+## Demo
+
+For the repeatable Production Simulator walkthrough, see the
+[Demo Runbook](docs/demo-runbook.md).

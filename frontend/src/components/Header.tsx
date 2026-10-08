@@ -10,25 +10,15 @@ function Header() {
 
   return (
     <header className="app-header">
-      <div className="app-header-brand">
-        <div className="app-header-brand-mark">
-          IQ
-        </div>
-
-        <div className="app-header-brand-copy">
-          <span className="app-header-brand-name">IncidentIQ</span>
-          <span className="app-header-brand-subtitle">
-            Incident Intelligence
-          </span>
-        </div>
+      <div className="app-header-context">
+        <span className="app-header-context-dot" />
+        <span>Engineering incident intelligence</span>
       </div>
 
       <div className="app-header-user">
         <div className="app-header-user-info">
-          <div className="app-header-avatar">E</div>
-
           <div className="app-header-user-copy">
-            <span className="app-header-user-name">Engineer</span>
+            <span className="app-header-user-name">Signed in</span>
             <span className="app-header-user-role">
               Investigation workspace
             </span>

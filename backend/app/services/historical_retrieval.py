@@ -24,6 +24,7 @@ class RetrievedHistoricalIncident:
     severity: str
     service_id: UUID | None
     occurred_at: datetime
+    resolved_at: datetime | None
     similarity_score: float
 
 
@@ -109,6 +110,7 @@ def retrieve_similar_historical_incidents(
                 severity=historical_incident.severity,
                 service_id=historical_incident.service_id,
                 occurred_at=historical_incident.occurred_at,
+                resolved_at=historical_incident.resolved_at,
                 similarity_score=similarity_score,
             )
         )

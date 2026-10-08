@@ -31,7 +31,7 @@ function LoginPage() {
         data.access_token,
       );
 
-      navigate("/dashboard");
+      navigate("/home");
     } catch (err) {
       setError(
         err instanceof Error

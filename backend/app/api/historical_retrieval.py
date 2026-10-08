@@ -97,6 +97,7 @@ def get_similar_historical_incidents(
             severity=result.severity,
             service_id=result.service_id,
             occurred_at=result.occurred_at,
+            resolved_at=result.resolved_at,
             similarity_score=result.similarity_score,
         )
         for result in results

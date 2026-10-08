@@ -195,13 +195,12 @@ function IncidentsPage() {
           </div>
 
           <div className="state-title">
-            No incidents detected
+            No active incidents
           </div>
 
           <div className="state-description">
-            IncidentIQ will surface incidents here
-            when abnormal behavior is detected from
-            project telemetry.
+            When IncidentIQ detects correlated abnormal behavior,
+            incidents will appear here.
           </div>
         </div>
       ) : (

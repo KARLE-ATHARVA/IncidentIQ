@@ -104,15 +104,27 @@ function ProjectsPage() {
           {projects.map((project) => (
             <div className="card" key={project.id}>
               <div className="card-body">
-                <h2
+                <div
                   style={{
-                    margin: "0 0 8px",
-                    fontSize: "18px",
-                    fontWeight: 650,
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: "12px",
+                    marginBottom: "8px",
                   }}
                 >
-                  {project.name}
-                </h2>
+                  <h2
+                    style={{
+                      margin: 0,
+                      fontSize: "18px",
+                      fontWeight: 650,
+                    }}
+                  >
+                    {project.name}
+                  </h2>
+
+                  <span className="badge badge-neutral">Production</span>
+                </div>
 
                 <p
                   style={{
@@ -124,13 +136,33 @@ function ProjectsPage() {
                   Investigate incidents and review engineering evidence.
                 </p>
 
-                <button
-                  type="button"
-                  className="button button-primary"
-                  onClick={() => navigate(`/projects/${project.id}/incidents`)}
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "10px",
+                  }}
                 >
-                  View incidents
-                </button>
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    onClick={() =>
+                      navigate(`/projects/${project.id}/incidents`)
+                    }
+                  >
+                    View incidents
+                  </button>
+
+                  <button
+                    type="button"
+                    className="button button-secondary"
+                    onClick={() =>
+                      navigate(`/projects/${project.id}/simulator`)
+                    }
+                  >
+                    Production simulator
+                  </button>
+                </div>
               </div>
             </div>
           ))}

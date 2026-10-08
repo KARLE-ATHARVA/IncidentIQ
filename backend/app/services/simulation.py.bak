@@ -1,0 +1,159 @@
+from datetime import datetime, timedelta, timezone
+from uuid import UUID
+
+from sqlalchemy.orm import Session
+
+from backend.app.schemas.deployment_event import (
+    DeploymentEventCreate,
+)
+from backend.app.schemas.log_event import LogEventCreate
+from backend.app.schemas.metric_event import MetricEventCreate
+from backend.app.services.incident_pipeline import (
+    process_metric_event_for_incident,
+)
+from backend.app.services.telemetry import (
+    create_deployment_event,
+    create_log_event,
+    create_metric_event,
+)
+
+
+def run_bad_deployment_simulation(
+    db: Session,
+    service_id: UUID,
+):
+    now = datetime.now(timezone.utc)
+
+    # ---------------------------------------------------------
+    # 1. Establish normal application behavior
+    # ---------------------------------------------------------
+
+    normal_values = [
+        100,
+        101,
+        99,
+        100,
+        102,
+        98,
+        101,
+        100,
+        99,
+        100,
+        101,
+        100,
+        98,
+        102,
+        100,
+        99,
+        101,
+        100,
+        102,
+        99,
+    ]
+
+    for index, value in enumerate(normal_values):
+        timestamp = (
+            now - timedelta(minutes=26 - index)
+        )
+
+        create_metric_event(
+            db=db,
+            service_id=service_id,
+            data=MetricEventCreate(
+                timestamp=timestamp,
+                name="checkout_latency",
+                value=value,
+            ),
+        )
+
+    # ---------------------------------------------------------
+    # 2. Simulate a deployment
+    # ---------------------------------------------------------
+
+    deployment_time = (
+        now - timedelta(minutes=2)
+    )
+
+    create_deployment_event(
+        db=db,
+        service_id=service_id,
+        data=DeploymentEventCreate(
+            timestamp=deployment_time,
+            version="v2.4.0",
+            description=(
+                "Deployed checkout payment "
+                "integration changes."
+            ),
+        ),
+    )
+
+    # ---------------------------------------------------------
+    # 3. Simulate degraded application behavior
+    # ---------------------------------------------------------
+
+    anomaly_values = [
+        160,
+        165,
+        162,
+        168,
+        170,
+    ]
+
+    for index, value in enumerate(anomaly_values):
+        timestamp = (
+            now - timedelta(minutes=6 - index)
+        )
+
+        create_metric_event(
+            db=db,
+            service_id=service_id,
+            data=MetricEventCreate(
+                timestamp=timestamp,
+                name="checkout_latency",
+                value=value,
+            ),
+        )
+
+    # ---------------------------------------------------------
+    # 4. Simulate correlated payment failure
+    # ---------------------------------------------------------
+
+    create_log_event(
+        db=db,
+        service_id=service_id,
+        data=LogEventCreate(
+            timestamp=(
+                now - timedelta(seconds=30)
+            ),
+            level="ERROR",
+            message=(
+                "Checkout requests are timing out "
+                "while calling payment service."
+            ),
+        ),
+    )
+
+    # ---------------------------------------------------------
+    # 5. Create the current anomalous observation
+    # ---------------------------------------------------------
+
+    current_metric = create_metric_event(
+        db=db,
+        service_id=service_id,
+        data=MetricEventCreate(
+            timestamp=now,
+            name="checkout_latency",
+            value=175,
+        ),
+    )
+
+    # ---------------------------------------------------------
+    # 6. Run the EXISTING IncidentIQ pipeline
+    # ---------------------------------------------------------
+
+    incident = process_metric_event_for_incident(
+        db=db,
+        metric_event_id=current_metric.id,
+    )
+
+    return incident

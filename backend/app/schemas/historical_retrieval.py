@@ -16,4 +16,5 @@ class SimilarHistoricalIncidentResponse(BaseModel):
     severity: str
     service_id: UUID | None
     occurred_at: datetime
+    resolved_at: datetime | None
     similarity_score: float
