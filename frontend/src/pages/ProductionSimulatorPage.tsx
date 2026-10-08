@@ -74,9 +74,7 @@ function ProductionSimulatorPage() {
       setSimulationActive(false);
       setLastResult(null);
 
-      notify.success(
-        "Simulation reset. The environment is healthy again.",
-      );
+      notify.success("Simulation reset. The environment is healthy again.");
     } catch (err) {
       notify.error(
         err instanceof Error
@@ -124,9 +122,7 @@ function ProductionSimulatorPage() {
       } else {
         setSimulationActive(false);
 
-        notify.error(
-          "The simulation completed, but no incident was detected.",
-        );
+        notify.error("The simulation completed, but no incident was detected.");
       }
     } catch (err) {
       notify.error(
@@ -144,9 +140,7 @@ function ProductionSimulatorPage() {
       return;
     }
 
-    navigate(
-      `/projects/${projectId}/incidents/${lastResult.incidentId}`,
-    );
+    navigate(`/projects/${projectId}/incidents/${lastResult.incidentId}`);
   }
 
   function getDisplayIncidentTitle(title: string) {
@@ -180,23 +174,17 @@ function ProductionSimulatorPage() {
     <div className="page simulator-page">
       <div className="page-header">
         <div>
-          <p className="eyebrow">
-            PRODUCTION ENVIRONMENT
-          </p>
+          <p className="eyebrow">PRODUCTION ENVIRONMENT</p>
 
-          <h1>
-            Production Simulator
-          </h1>
+          <h1>Production Simulator</h1>
 
           <p className="page-subtitle">
-            Simulate a realistic application failure and watch
-            IncidentIQ detect, correlate, and investigate it.
+            Simulate a realistic application failure and watch IncidentIQ
+            detect, correlate, and investigate it.
           </p>
         </div>
 
-        <span className="badge badge-resolved">
-          SIMULATION MODE
-        </span>
+        <span className="badge badge-resolved">SIMULATION MODE</span>
       </div>
 
       {/* HEALTHY ENVIRONMENT */}
@@ -205,24 +193,18 @@ function ProductionSimulatorPage() {
         <div className="card-body">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">
-                CHECKOUT SERVICE
-              </p>
+              <p className="eyebrow">CHECKOUT SERVICE</p>
 
-              <h2>
-                Healthy production environment
-              </h2>
+              <h2>Healthy production environment</h2>
 
               <p>
-                This environment generates realistic telemetry that
-                flows through the same IncidentIQ detection and
-                investigation pipeline.
+                This environment generates realistic telemetry that flows
+                through the same IncidentIQ detection and investigation
+                pipeline.
               </p>
             </div>
 
-            <span className="badge badge-resolved">
-              ● Healthy
-            </span>
+            <span className="badge badge-resolved">● Healthy</span>
           </div>
 
           <div
@@ -241,9 +223,7 @@ function ProductionSimulatorPage() {
                 justifyContent: "space-between",
               }}
             >
-              <span className="stat-label">
-                Checkout latency
-              </span>
+              <span className="stat-label">Checkout latency</span>
 
               <strong
                 className="stat-value"
@@ -273,9 +253,7 @@ function ProductionSimulatorPage() {
                 justifyContent: "space-between",
               }}
             >
-              <span className="stat-label">
-                Error rate
-              </span>
+              <span className="stat-label">Error rate</span>
 
               <strong
                 className="stat-value"
@@ -305,9 +283,7 @@ function ProductionSimulatorPage() {
                 justifyContent: "space-between",
               }}
             >
-              <span className="stat-label">
-                Deployment
-              </span>
+              <span className="stat-label">Deployment</span>
 
               <strong
                 className="stat-value"
@@ -337,9 +313,7 @@ function ProductionSimulatorPage() {
                 justifyContent: "space-between",
               }}
             >
-              <span className="stat-label">
-                Environment
-              </span>
+              <span className="stat-label">Environment</span>
 
               <strong
                 className="stat-value"
@@ -374,19 +348,15 @@ function ProductionSimulatorPage() {
         <div className="card-body">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">
-                FAILURE INJECTION
-              </p>
+              <p className="eyebrow">FAILURE INJECTION</p>
 
-              <h2>
-                Simulate a bad deployment
-              </h2>
+              <h2>Simulate a bad deployment</h2>
 
               <p>
-                Introduce a degraded deployment that increases
-                checkout latency and produces payment timeout errors.
-                IncidentIQ will receive the resulting telemetry and
-                determine whether it constitutes an incident.
+                Introduce a degraded deployment that increases checkout latency
+                and produces payment timeout errors. IncidentIQ will receive the
+                resulting telemetry and determine whether it constitutes an
+                incident.
               </p>
             </div>
           </div>
@@ -395,8 +365,7 @@ function ProductionSimulatorPage() {
             style={{
               marginTop: "24px",
               display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(220px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
               gap: "14px",
             }}
           >
@@ -408,9 +377,7 @@ function ProductionSimulatorPage() {
                 background: "var(--surface-subtle)",
               }}
             >
-              <span className="stat-label">
-                SCENARIO
-              </span>
+              <span className="stat-label">SCENARIO</span>
 
               <strong
                 style={{
@@ -440,9 +407,7 @@ function ProductionSimulatorPage() {
                 background: "var(--surface-subtle)",
               }}
             >
-              <span className="stat-label">
-                EXPECTED SIGNALS
-              </span>
+              <span className="stat-label">EXPECTED SIGNALS</span>
 
               <strong
                 style={{
@@ -473,9 +438,7 @@ function ProductionSimulatorPage() {
                 background: "var(--surface-subtle)",
               }}
             >
-              <span className="stat-label">
-                INCIDENTIQ RESPONSE
-              </span>
+              <span className="stat-label">INCIDENTIQ RESPONSE</span>
 
               <strong
                 style={{
@@ -512,10 +475,7 @@ function ProductionSimulatorPage() {
               type="button"
               onClick={handleBadDeployment}
               disabled={
-                running ||
-                resetting ||
-                loadingState ||
-                simulationActive
+                running || resetting || loadingState || simulationActive
               }
             >
               {running
@@ -530,15 +490,10 @@ function ProductionSimulatorPage() {
               type="button"
               onClick={handleResetSimulation}
               disabled={
-                running ||
-                resetting ||
-                loadingState ||
-                !simulationActive
+                running || resetting || loadingState || !simulationActive
               }
             >
-              {resetting
-                ? "Resetting..."
-                : "Reset Simulation"}
+              {resetting ? "Resetting..." : "Reset Simulation"}
             </button>
 
             <span
@@ -567,17 +522,13 @@ function ProductionSimulatorPage() {
           <div className="card-body">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">
-                  INCIDENT DETECTED
-                </p>
+                <p className="eyebrow">INCIDENT DETECTED</p>
 
-                <h2>
-                  IncidentIQ detected a production incident
-                </h2>
+                <h2>IncidentIQ detected a production incident</h2>
 
                 <p>
-                  The simulated failure successfully passed through
-                  the existing detection and correlation pipeline.
+                  The simulated failure successfully passed through the existing
+                  detection and correlation pipeline.
                 </p>
               </div>
 
@@ -645,9 +596,7 @@ function ProductionSimulatorPage() {
                     minWidth: "250px",
                   }}
                 >
-                  <span className="stat-label">
-                    INCIDENT ID
-                  </span>
+                  <span className="stat-label">INCIDENT ID</span>
 
                   <p
                     style={{
@@ -702,13 +651,9 @@ function ProductionSimulatorPage() {
         }}
       >
         <div className="card-body">
-          <p className="eyebrow">
-            EVIDENCE-FIRST DESIGN
-          </p>
+          <p className="eyebrow">EVIDENCE-FIRST DESIGN</p>
 
-          <h2>
-            What this simulator demonstrates
-          </h2>
+          <h2>What this simulator demonstrates</h2>
 
           <p
             style={{
@@ -717,8 +662,8 @@ function ProductionSimulatorPage() {
           >
             The simulator does not decide the root cause. It generates
             engineering evidence and lets IncidentIQ's existing detection,
-            correlation, retrieval, and reasoning pipeline determine what
-            the evidence supports.
+            correlation, retrieval, and reasoning pipeline determine what the
+            evidence supports.
           </p>
 
           <div
@@ -750,9 +695,7 @@ function ProductionSimulatorPage() {
                 01
               </span>
 
-              <strong>
-                Telemetry
-              </strong>
+              <strong>Telemetry</strong>
 
               <span
                 style={{
@@ -786,9 +729,7 @@ function ProductionSimulatorPage() {
                 02
               </span>
 
-              <strong>
-                Detection
-              </strong>
+              <strong>Detection</strong>
 
               <span
                 style={{
@@ -822,9 +763,7 @@ function ProductionSimulatorPage() {
                 03
               </span>
 
-              <strong>
-                Correlation
-              </strong>
+              <strong>Correlation</strong>
 
               <span
                 style={{
@@ -858,9 +797,7 @@ function ProductionSimulatorPage() {
                 04
               </span>
 
-              <strong>
-                Investigation
-              </strong>
+              <strong>Investigation</strong>
 
               <span
                 style={{
